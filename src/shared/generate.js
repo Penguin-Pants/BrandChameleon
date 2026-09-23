@@ -38,7 +38,16 @@ const USE_PHRASES = [
   ["other", (n) => plural(n, "other use")],
 ];
 
-const KIND_WORDS = { button: "button", input: "input", card: "card", img: "image", nav: "navigation area" };
+const KIND_WORDS = {
+  button: "button",
+  input: "input",
+  card: "card",
+  img: "image",
+  nav: "navigation area",
+  link: "link",
+  heading: "heading",
+  other: "other element",
+};
 
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -169,7 +178,7 @@ function buildComponents(model, edits, ctx) {
         ["textColor", text],
         ["typography", type],
         ["rounded", radius],
-        ["padding", uniform && padding[0] > 0 ? { literal: px(padding[0]) } : null],
+        ["padding", uniform ? { literal: px(padding[0]) } : null],
         ["height", button.height ? { literal: px(button.height) } : null],
       ],
       [

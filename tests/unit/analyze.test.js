@@ -244,6 +244,56 @@ test("the Source block keeps the full URL; the file does not (FR-35, FR-42)", ()
   assert.ok(!generate(model, initialEdits(model)).includes("view=pricing"));
 });
 
+test("clustering stays fast on a color-rich page (FR-53)", () => {
+  const color = (i) => `rgb(${i % 256}, ${Math.floor(i / 256) % 256}, ${(i * 7) % 256})`;
+  const records = Array.from({ length: 5000 }, (_, i) =>
+    record({ tag: "p", color: color(i * 3), bg: color(i * 3 + 1), border: [1, "solid", color(i * 3 + 2)], textLen: 10 }),
+  );
+  const start = Date.now();
+  analyze(scan({ records }), CONTEXT);
+  assert.ok(Date.now() - start < 1500, `analysis took ${Date.now() - start} ms`);
+});
+
+test("brand hints need the exact color on the page, not a near one (FR-21)", () => {
+  const model = analyze(
+    scan({
+      records: [text("rgb(0, 0, 0)"), button("rgb(0, 85, 255)", "rgb(255, 255, 255)", { count: 5 }), link("rgb(228, 0, 43)")],
+      customProps: [{ name: "--brand-primary", value: "#e4012c" }],
+    }),
+    CONTEXT,
+  );
+  assert.equal(roleHex(model, "primary"), "#0055FF");
+});
+
+test("shadows count on every element kind", () => {
+  const model = analyze(
+    scan({ records: [text("rgb(0, 0, 0)"), record({ kind: "input", tag: "input", shadow: "rgba(0, 0, 0, 0.2) 0px 1px 2px 0px" })] }),
+    CONTEXT,
+  );
+  assert.equal(model.shadows[0].kinds[0].kind, "input");
+  assert.ok(generate(model, initialEdits(model)).includes("on 1 input."));
+});
+
+test("an unusable header image falls back to the home-link image", () => {
+  const model = analyze(
+    scan({
+      records: [text("rgb(0, 0, 0)")],
+      logoImages: {
+        byAttr: { src: "data:image/png;base64,AAAA", width: 10, height: 10 },
+        byHomeLink: { src: "https://acme.example/logo.svg", width: 120, height: 32 },
+      },
+    }),
+    CONTEXT,
+  );
+  assert.deepEqual(model.logos[0], { url: "https://acme.example/logo.svg", label: "Header logo", width: 120, height: 32 });
+});
+
+test("text directly inside body is content", () => {
+  const input = scan();
+  input.records[1] = { ...input.records[1], color: "rgb(0, 0, 0)", textLen: 11, font: ["Inter", "16px", "400", "24px", "normal"] };
+  assert.doesNotThrow(() => analyze(input, CONTEXT));
+});
+
 test("a page with only html and body raises no-content", () => {
   assert.throws(() => analyze(scan(), CONTEXT), (error) => error instanceof ScanError && error.code === "no-content");
 });

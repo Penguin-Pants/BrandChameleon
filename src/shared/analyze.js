@@ -1,5 +1,5 @@
 // Turns collector output into a proposed token model (FR-16 to FR-32).
-import { normalizeColor, oklabDistance, oklchChroma } from "./color.js";
+import { hexToRgba, normalizeColor, oklabDistance, oklchChroma, toOklab } from "./color.js";
 import {
   ACCENT_MIN_DISTANCE,
   ACCENT_MIN_WEIGHT_RATIO,
@@ -115,15 +115,66 @@ function collectColorUses(records) {
   return { exact, textByHex, parsed };
 }
 
+/** OKLab + alpha per hex, computed once. */
+function labCache() {
+  const cache = new Map();
+  return (hex) => {
+    let value = cache.get(hex);
+    if (!value) {
+      const rgba = hexToRgba(hex);
+      value = [...toOklab(rgba), rgba.a];
+      cache.set(hex, value);
+    }
+    return value;
+  };
+}
+
 function buildClusters(exact) {
   const sorted = [...exact.values()].sort((a, b) => b.weight - a.weight || a.first - b.first);
   const clusters = [];
   const memberOf = new Map();
+  const lab = labCache();
+  const distance = (hexA, hexB) => {
+    const [l1, a1, b1, alpha1] = lab(hexA);
+    const [l2, a2, b2, alpha2] = lab(hexB);
+    return Math.hypot(l1 - l2, a1 - a2, b1 - b2) + Math.abs(alpha1 - alpha2);
+  };
+  // Grid of CLUSTER_DISTANCE cells: a match can only sit in the 27 cells
+  // around a color, so each color checks a few clusters, not all of them.
+  const grid = new Map();
+  const cell = (hex) => lab(hex).slice(0, 3).map((v) => Math.floor(v / CLUSTER_DISTANCE));
+  const nearby = (hex) => {
+    const [x, y, z] = cell(hex);
+    const found = [];
+    for (let dx = -1; dx <= 1; dx += 1) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dz = -1; dz <= 1; dz += 1) found.push(...(grid.get(`${x + dx},${y + dy},${z + dz}`) ?? []));
+      }
+    }
+    return found;
+  };
   for (const entry of sorted) {
-    let cluster = clusters.find((c) => oklabDistance(c.hex, entry.hex) < CLUSTER_DISTANCE);
+    // Same rule as a linear scan: the first-created cluster within range wins.
+    let cluster = null;
+    for (const candidate of nearby(entry.hex)) {
+      if (distance(candidate.hex, entry.hex) < CLUSTER_DISTANCE && (!cluster || candidate.order < cluster.order)) {
+        cluster = candidate;
+      }
+    }
     if (!cluster) {
-      cluster = { hex: entry.hex, weight: 0, interactive: 0, uses: {}, first: entry.first, customProps: [], textLen: 0 };
+      cluster = {
+        hex: entry.hex,
+        order: clusters.length,
+        weight: 0,
+        interactive: 0,
+        uses: {},
+        first: entry.first,
+        customProps: [],
+        textLen: 0,
+      };
       clusters.push(cluster);
+      const key = cell(entry.hex).join(",");
+      grid.set(key, [...(grid.get(key) ?? []), cluster]);
     }
     cluster.weight += entry.weight;
     cluster.interactive += entry.interactive;
@@ -502,7 +553,7 @@ function analyzeLogos(page, logoImages) {
     if (!clean || logos.some((l) => l.url === clean)) return;
     logos.push({ url: clean, label, width: width || null, height: height || null });
   };
-  const headerImage = logoImages?.byAttr ?? logoImages?.byHomeLink;
+  const headerImage = [logoImages?.byAttr, logoImages?.byHomeLink].find((image) => image && cleanUrl(image.src, page.url));
   if (headerImage) add(headerImage.src, "Header logo", headerImage.width, headerImage.height);
 
   const relTokens = (icon) => icon.rel.split(/\s+/);
@@ -534,7 +585,7 @@ function analyzeLogos(page, logoImages) {
  */
 export function analyze(scan, { scannedAt, extVersion }) {
   const records = scan.records ?? [];
-  if (!records.some((r) => r.tag !== "html" && r.tag !== "body")) throw new ScanError("no-content");
+  if (!records.some((r) => (r.tag !== "html" && r.tag !== "body") || r.textLen > 0)) throw new ScanError("no-content");
 
   const { exact, textByHex, parsed } = collectColorUses(records);
   const { clusters, memberOf } = buildClusters(exact);
@@ -543,7 +594,8 @@ export function analyze(scan, { scannedAt, extVersion }) {
     const hex = normalizeColor(prop.value);
     const name = cleanCustomPropertyName(prop.name);
     if (!hex || !name) continue;
-    const cluster = memberOf.get(hex) ?? clusters.find((c) => oklabDistance(c.hex, hex) < CLUSTER_DISTANCE);
+    // Only a color that is actually used on the page takes the name (FR-21).
+    const cluster = memberOf.get(hex);
     if (cluster && !cluster.customProps.includes(name)) cluster.customProps.push(name);
   }
 

@@ -11,7 +11,7 @@ import { COLLECTOR_OPTIONS, scanFixture } from "../support/scan.js";
 const CONTEXT = { scannedAt: "2026-09-23T12:00:00.000Z", extVersion: "0.1.0" };
 const FIXTURES = [
   "brand-basic", "mono", "framework-leftover", "overlay", "hidden", "shadow",
-  "cross-origin", "sparse", "classify", "large", "logos", "clobber", "wide", "many-props",
+  "cross-origin", "sparse", "classify", "large", "logos", "clobber", "wide", "many-props", "adopted",
 ];
 
 async function analyzeFixture(page, name) {
@@ -181,7 +181,9 @@ test("AC-20 logo candidates follow FR-32 order", async ({ page, baseURL }) => {
 test("FR-11 links with the parent background are links, filled links are buttons", async ({ page }) => {
   const { scan } = await analyzeFixture(page, "classify");
   const anchors = scan.records.filter((r) => r.tag === "a");
-  expect(anchors.map((r) => r.kind)).toEqual(["link", "button"]);
+  // The last link sits under a visibility:hidden parent that paints no background,
+  // so its fill differs from the white page and it is a button.
+  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button"]);
   // A transparent border is not a visible border: that link merges into the link record.
   expect(anchors[0].count).toBe(2);
   // An elliptical corner is neither a radius value nor "full".
@@ -216,6 +218,12 @@ test("FR-10 a huge sibling list stays within the node limit", async ({ page }) =
   expect(scan.limits.visited).toBeLessThanOrEqual(50000);
   // Depth-first order: the early nested button is read before later siblings.
   expect(analyze(scan, CONTEXT).candidates.map((c) => c.hex)).toContain("#E4002B");
+});
+
+test("FR-13 constructed stylesheets are read for custom properties", async ({ page }) => {
+  const { scan, model } = await analyzeFixture(page, "adopted");
+  expect(scan.customProps.map((p) => p.name)).toContain("--brand-primary");
+  expect(roleHexes(model).primary).toBe("#E4002B");
 });
 
 test("FR-13 a brand custom property after 500 others still counts", async ({ page }) => {

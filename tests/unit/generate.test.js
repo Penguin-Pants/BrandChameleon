@@ -93,6 +93,8 @@ test("a hand-set role keeps component references and says so (FR-38, FR-39)", ()
 
 test("uniform padding is a token, mixed padding is prose (FR-38)", () => {
   const model = baseModel();
+  model.components["button-primary"].padding = [0, 0, 0, 0];
+  assert.ok(generate(model, initialEdits(model)).includes('padding: "0px"'), "zero padding is a real value");
   model.components["button-primary"].padding = [10, 10, 10, 10];
   assert.ok(generate(model, initialEdits(model)).includes('padding: "10px"'));
   model.components["button-primary"].padding = [4, 8, 6, 8];

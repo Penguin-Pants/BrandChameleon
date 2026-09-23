@@ -151,7 +151,8 @@ export async function collectPage(options) {
       const rect = el.getBoundingClientRect();
       const hidden = cs.visibility === "hidden" || cs.visibility === "collapse" || rect.width === 0 || rect.height === 0;
       if (hidden) {
-        pushChildren(el, childContext);
+        // A hidden element paints no background, so children keep the one below it.
+        pushChildren(el, { ...childContext, parentBg });
         continue;
       }
 
@@ -233,7 +234,7 @@ export async function collectPage(options) {
         radiusFull: radius !== null && radiusFull,
         padding: usesPadding ? [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(px) : null,
         gap: isFlexOrGrid ? [cs.rowGap, cs.columnGap].map(pxOnly) : null,
-        shadow: ["button", "card", "nav"].includes(kind) ? shadow : null,
+        shadow,
         font: hasText || ["button", "heading", "link"].includes(kind)
           ? [cs.fontFamily, cs.fontSize, cs.fontWeight, cs.lineHeight, cs.letterSpacing]
           : null,
@@ -248,8 +249,10 @@ export async function collectPage(options) {
       if (tag === "img" && inNav) {
         const text = ["id", "class", "alt", "src"].map((name) => el.getAttribute(name) ?? "").join(" ").toLowerCase();
         const image = { src: el.currentSrc || el.src, width: el.naturalWidth || null, height: el.naturalHeight || null };
-        if (!logoImages.byAttr && text.includes("logo")) logoImages.byAttr = image;
-        if (!logoImages.byHomeLink && inHomeLink) logoImages.byHomeLink = image;
+        // data: and blob: images have no shareable URL; keep looking.
+        const usable = /^https?:/i.test(image.src);
+        if (usable && !logoImages.byAttr && text.includes("logo")) logoImages.byAttr = image;
+        if (usable && !logoImages.byHomeLink && inHomeLink) logoImages.byHomeLink = image;
       }
 
       pushChildren(el, childContext);
@@ -286,6 +289,8 @@ export async function collectPage(options) {
     walkRules(rules);
   };
   for (const sheet of document.styleSheets) readSheet(sheet);
+  // Constructed stylesheets (web components) are not in document.styleSheets.
+  for (const sheet of document.adoptedStyleSheets ?? []) readSheet(sheet);
   const rootStyle = getComputedStyle(document.documentElement);
   const customProps = [...names]
     .map((name) => ({ name, value: rootStyle.getPropertyValue(name).trim() }))
