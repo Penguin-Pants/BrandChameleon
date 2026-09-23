@@ -52,6 +52,7 @@ code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size:
 main { padding: 12px 16px 16px; }
 .view .lead { font-size: 15px; }
 .muted { color: var(--muted); }
+.stack { overflow-wrap: anywhere; }
 
 .progress { height: 4px; border-radius: 2px; background: var(--surface); overflow: hidden; }
 .progress span {

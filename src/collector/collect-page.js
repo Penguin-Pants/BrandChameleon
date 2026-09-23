@@ -169,7 +169,11 @@ export async function collectPage(options) {
 
       visible += 1;
       const area = rect.width * rect.height;
-      const borderVisible = parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== "none" && cs.borderTopStyle !== "hidden";
+      const borderVisible =
+        parseFloat(cs.borderTopWidth) >= 1 &&
+        cs.borderTopStyle !== "none" &&
+        cs.borderTopStyle !== "hidden" &&
+        !isTransparent(cs.borderTopColor);
       const border = borderVisible ? [px(cs.borderTopWidth), cs.borderTopStyle, cs.borderTopColor] : null;
       const isRoot = el === document.body || el === document.documentElement;
       const shadow = cs.boxShadow && cs.boxShadow !== "none" ? cs.boxShadow : null;
@@ -207,7 +211,9 @@ export async function collectPage(options) {
       let radius = null;
       let radiusFull = false;
       if (usesRadius) {
-        radius = cs.borderTopLeftRadius.split(" ")[0];
+        // An elliptical corner ("20px 1px") has no single radius: ignore it.
+        const [horizontal, vertical = horizontal] = cs.borderTopLeftRadius.split(" ");
+        radius = horizontal === vertical ? horizontal : "0px";
         const value = parseFloat(radius);
         const minSide = Math.min(rect.width, rect.height);
         if (radius.endsWith("%")) radiusFull = value >= 50;

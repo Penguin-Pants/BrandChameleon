@@ -192,6 +192,12 @@ test("AC-28 reloading restores the review, text edits and dirty flag", async ({ 
   expect((await stored(page, "review:1")).dirty).toBe(true);
 });
 
+test("7.7 typography rows expose the detected font stack", async ({ page }) => {
+  await openSidebar(page, { "scan:1": done() });
+  await expect(page.locator("#family-headline-lg")).toHaveAttribute("title", "Detected stack: Inter, sans-serif");
+  await expect(page.locator(".type-row .stack").first()).toHaveText("Detected stack: Inter, sans-serif");
+});
+
 test("FR-42 the Source block shows the full URL in its title", async ({ page }) => {
   const full = { ...model, source: { ...model.source, displayUrl: "https://acme.example/app?view=pricing#plans" } };
   await openSidebar(page, { "scan:1": done("u", full) });

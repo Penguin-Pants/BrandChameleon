@@ -134,6 +134,17 @@ test("low contrast produces Don't rules (FR-39)", () => {
   assert.match(markdown, /- Don't use on-primary text on primary backgrounds for normal-size text \(\d\.\d\d:1, below the WCAG AA minimum of 4\.5:1\)\./);
 });
 
+test("a role edited to a fully transparent color is not written as a component background", () => {
+  const model = baseModel();
+  const edits = initialEdits(model);
+  edits.roles.primary = { hex: "#FFFFFF00" };
+  const markdown = generate(model, edits);
+  const block = markdown.split("\n  button-primary:\n")[1].split(/\n {2}\S/)[0];
+  assert.ok(!block.includes("backgroundColor"));
+  assert.ok(markdown.includes("- **button-primary:** transparent background"));
+  assert.equal(lint(markdown).summary.errors, 0);
+});
+
 test("no WCAG claim over a translucent background", () => {
   const model = baseModel();
   const edits = initialEdits(model);

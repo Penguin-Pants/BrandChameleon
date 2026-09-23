@@ -180,8 +180,14 @@ test("AC-20 logo candidates follow FR-32 order", async ({ page, baseURL }) => {
 
 test("FR-11 links with the parent background are links, filled links are buttons", async ({ page }) => {
   const { scan } = await analyzeFixture(page, "classify");
-  const anchors = scan.records.filter((r) => r.tag === "a").map((r) => r.kind);
-  expect(anchors).toEqual(["link", "button"]);
+  const anchors = scan.records.filter((r) => r.tag === "a");
+  expect(anchors.map((r) => r.kind)).toEqual(["link", "button"]);
+  // A transparent border is not a visible border: that link merges into the link record.
+  expect(anchors[0].count).toBe(2);
+  // An elliptical corner is neither a radius value nor "full".
+  const elliptical = scan.records.find((r) => r.tag === "button");
+  expect(elliptical.radius).toBeNull();
+  expect(elliptical.radiusFull).toBe(false);
 });
 
 test("FR-29 percentage gaps are not spacing values", async ({ page }) => {

@@ -192,6 +192,49 @@ test("body-sm counts only elements that hold text", () => {
     CONTEXT,
   );
   assert.equal(withText.typography["body-sm"].fontSize, 14);
+
+  const mixed = analyze(
+    scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 0)", { font: small, count: 5, textLen: 30, textCount: 3 })] }),
+    CONTEXT,
+  );
+  assert.equal(mixed.typography["body-sm"].count, 3, "prose counts only text-bearing elements");
+  assert.deepEqual(mixed.typography["body-sm"].tags, [{ tag: "a", count: 3 }]);
+});
+
+test("a 0px line height is kept as 0", () => {
+  const model = analyze(scan({ records: [text("rgb(0, 0, 0)", { font: ["Inter", "16px", "400", "0px", "normal"] })] }), CONTEXT);
+  assert.equal(model.typography["body-md"].lineHeight, 0);
+  assert.ok(generate(model, initialEdits(model)).includes("    lineHeight: 0\n"));
+});
+
+test("transparent navigation areas win the nav background vote", () => {
+  const model = analyze(
+    scan({
+      records: [
+        text("rgb(0, 0, 0)"),
+        record({ kind: "nav", tag: "nav", count: 20 }),
+        record({ kind: "nav", tag: "header", bg: "rgb(200, 0, 0)" }),
+        link("rgb(0, 0, 0)", { inNav: true }),
+      ],
+    }),
+    CONTEXT,
+  );
+  assert.equal(model.components.nav.bg, null);
+});
+
+test("a button group takes its most common border", () => {
+  const model = analyze(
+    scan({
+      records: [
+        text("rgb(0, 0, 0)"),
+        button("rgb(99, 91, 255)", "rgb(255, 255, 255)", { border: [2, "solid", "rgb(0, 0, 0)"] }),
+        button("rgb(99, 91, 255)", "rgb(255, 255, 255)", { count: 5 }),
+      ],
+    }),
+    CONTEXT,
+  );
+  assert.equal(model.components["button-primary"].border, null);
+  assert.equal(model.components["button-primary"].count, 6);
 });
 
 test("the Source block keeps the full URL; the file does not (FR-35, FR-42)", () => {

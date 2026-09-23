@@ -267,14 +267,14 @@ export function splitFontStack(stack) {
   return families.filter(Boolean);
 }
 
-function typographyLevel(group) {
+function typographyLevel(group, countOf = (r) => r.count) {
   const [stack, size, weight, lineHeight, letterSpacing] = JSON.parse(group.key);
   const sizePx = pxNumber(size);
   if (!sizePx) return null;
   const weightNumber = Number(weight) || { normal: 400, bold: 700 }[weight] || 400;
   const lineHeightPx = pxNumber(lineHeight);
   const letterSpacingPx = pxNumber(letterSpacing);
-  const tags = tally(group.items, (r) => r.tag, (r) => r.count);
+  const tags = tally(group.items, (r) => r.tag, countOf);
   const families = splitFontStack(stack).map(cleanFontFamily).filter(Boolean);
   return {
     styleKey: group.key,
@@ -282,9 +282,10 @@ function typographyLevel(group) {
     stack: families.join(", "),
     fontSize: round(sizePx, 2),
     fontWeight: weightNumber,
-    lineHeight: lineHeightPx ? round(lineHeightPx / sizePx, 2) : null,
+    // 0px is a real value; only "normal" (null) is omitted.
+    lineHeight: lineHeightPx !== null ? round(lineHeightPx / sizePx, 2) : null,
     letterSpacing: letterSpacingPx ? round(letterSpacingPx / sizePx, 3) || null : null,
-    count: group.items.reduce((sum, r) => sum + r.count, 0),
+    count: group.items.reduce((sum, r) => sum + countOf(r), 0),
     tags: tags.slice(0, 3).map((t) => ({ tag: t.key, count: t.score })),
   };
 }
@@ -307,15 +308,16 @@ function analyzeTypography(records, isPrimaryButton) {
   );
   if (levels["body-md"]) {
     const bodySize = levels["body-md"].fontSize;
+    // Count only elements that hold text; empty ones can share a record.
+    const textCount = (r) => r.textCount ?? r.count;
     const small = tally(
       withFont.filter(
         (r) => r.textLen > 0 && !["button", "heading", "input"].includes(r.kind) && pxNumber(r.font[1]) < bodySize,
       ),
       styleKey,
-      // Count only elements that hold text; empty ones can share a record.
-      (r) => r.textCount ?? r.count,
+      textCount,
     )[0];
-    levels["body-sm"] = small && small.score >= 3 ? typographyLevel(small) : null;
+    levels["body-sm"] = small && small.score >= 3 ? typographyLevel(small, textCount) : null;
   }
   const buttons = withFont.filter((r) => r.kind === "button");
   const primaryButtons = buttons.filter(isPrimaryButton);
@@ -415,6 +417,10 @@ function analyzeComponents({ parsed, clusterOf, roles }) {
     if (!group) return null;
     const { record } = group.items[0];
     const sample = group.items[0];
+    // Borders are not part of the style key: take the most common variant.
+    const borderKey = (p) =>
+      JSON.stringify(p.record.border ? [p.record.border[0], p.record.border[1], clusterOf(p.border)?.id ?? null] : null);
+    const border = JSON.parse(tally(group.items, borderKey, (p) => p.record.count)[0].key);
     return {
       count: group.score,
       bg: clusterOf(sample.bg)?.id ?? null,
@@ -423,7 +429,7 @@ function analyzeComponents({ parsed, clusterOf, roles }) {
       padding: record.padding,
       height: record.height,
       fontKey: record.font ? JSON.stringify(record.font) : null,
-      border: record.border ? { width: record.border[0], style: record.border[1], color: clusterOf(sample.border)?.id ?? null } : null,
+      border: border ? { width: border[0], style: border[1], color: border[2] } : null,
     };
   };
 
@@ -442,7 +448,9 @@ function analyzeComponents({ parsed, clusterOf, roles }) {
   if (linkText) components.link = { text: linkText, count: links.reduce((s, p) => s + p.record.count, 0) };
 
   const navs = parsed.filter((p) => p.record.kind === "nav");
-  const navBg = mostCommonCluster(navs, (p) => p.bg);
+  // Transparent navigation areas vote too; when they win, no background is written.
+  const navVote = tally(navs, (p) => clusterOf(p.bg)?.id ?? "transparent", (p) => p.record.count)[0]?.key;
+  const navBg = navVote && navVote !== "transparent" ? navVote : null;
   const navText = mostCommonCluster(links.filter((p) => p.record.inNav), (p) => p.text);
   if (navBg || navText) components.nav = { bg: navBg, text: navText };
 
@@ -547,8 +555,9 @@ export function analyze(scan, { scannedAt, extVersion }) {
     backgrounds: scan.backgrounds ?? {},
   });
 
+  const infoByRecord = new Map(parsed.map((p) => [p.record, p]));
   const isPrimaryButton = (record) => {
-    const info = parsed.find((p) => p.record === record);
+    const info = infoByRecord.get(record);
     return Boolean(roles.primary && info && clusterOf(info.bg) === roles.primary);
   };
 

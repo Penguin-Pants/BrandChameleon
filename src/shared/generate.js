@@ -96,6 +96,12 @@ function buildContext(model, edits) {
     return hex ? { literal: hex, label: hex, hex } : null;
   };
 
+  // A background that resolves to alpha 0 is not written (FR-38).
+  const backgroundValue = (id, preferred) => {
+    const value = colorValue(id, preferred);
+    return value && /^#[0-9A-F]{6}00$/i.test(value.hex) ? null : value;
+  };
+
   const radiusValue = (radius) => {
     if (!radius) return null;
     const token = radius.full ? rounded.find((r) => r.full) : rounded.find((r) => !r.full && r.px === radius.px);
@@ -112,7 +118,7 @@ function buildContext(model, edits) {
     return { ref: `{typography.${level}}`, label: level };
   };
 
-  return { candidate, hexOf, colors, levels, rounded, spacing, colorValue, radiusValue, typographyRef };
+  return { candidate, hexOf, colors, levels, rounded, spacing, colorValue, backgroundValue, radiusValue, typographyRef };
 }
 
 function paddingProse(padding) {
@@ -131,7 +137,7 @@ function buildComponents(model, edits, ctx) {
 
   const page = model.components.page;
   if (page) {
-    const bg = ctx.colorValue(page.bg, ["surface"]);
+    const bg = ctx.backgroundValue(page.bg, ["surface"]);
     const text = ctx.colorValue(page.text, ["on-surface"]);
     const type = ctx.typographyRef("body-md");
     add(
@@ -147,7 +153,7 @@ function buildComponents(model, edits, ctx) {
   ]) {
     const button = model.components[name];
     if (!button) continue;
-    const bg = ctx.colorValue(button.bg, preferred.bg);
+    const bg = ctx.backgroundValue(button.bg, preferred.bg);
     const text = ctx.colorValue(button.text, preferred.text);
     const radius = ctx.radiusValue(button.radius);
     const padding = button.padding;
@@ -186,7 +192,7 @@ function buildComponents(model, edits, ctx) {
 
   const nav = model.components.nav;
   if (nav) {
-    const bg = ctx.colorValue(nav.bg, ["surface"]);
+    const bg = ctx.backgroundValue(nav.bg, ["surface"]);
     const text = ctx.colorValue(nav.text, ["on-surface"]);
     add("nav", [["backgroundColor", bg], ["textColor", text]], [bg && `background ${bg.label}`, text && `text ${text.label}`]);
   }

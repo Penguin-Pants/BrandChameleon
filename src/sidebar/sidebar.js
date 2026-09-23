@@ -319,7 +319,13 @@ function groupToggle(group, label) {
 function typographyRow(level) {
   const value = state.review.model.typography[level];
   const include = h("input", { id: `type-${level}`, type: "checkbox" });
-  const family = h("input", { id: `family-${level}`, type: "text", autocomplete: "off", spellcheck: "false" });
+  const family = h("input", {
+    id: `family-${level}`,
+    type: "text",
+    autocomplete: "off",
+    spellcheck: "false",
+    title: value.stack ? `Detected stack: ${value.stack}` : null,
+  });
   bind(include, () => {
     include.checked = state.review.edits.typography[level].include;
   });
@@ -348,6 +354,7 @@ function typographyRow(level) {
     h("label", { for: `type-${level}`, class: "inline" }, include, level),
     h("label", { for: `family-${level}` }, "Font family", family),
     h("p", { class: "muted" }, details.join(", ")),
+    value.stack ? h("p", { class: "muted stack", title: value.stack }, `Detected stack: ${value.stack}`) : null,
   );
 }
 
