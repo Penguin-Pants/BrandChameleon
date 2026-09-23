@@ -312,7 +312,8 @@ function analyzeTypography(records, isPrimaryButton) {
         (r) => r.textLen > 0 && !["button", "heading", "input"].includes(r.kind) && pxNumber(r.font[1]) < bodySize,
       ),
       styleKey,
-      count,
+      // Count only elements that hold text; empty ones can share a record.
+      (r) => r.textCount ?? r.count,
     )[0];
     levels["body-sm"] = small && small.score >= 3 ? typographyLevel(small) : null;
   }
@@ -569,6 +570,8 @@ export function analyze(scan, { scannedAt, extVersion }) {
     schema: 1,
     source: {
       url: cleanSourceUrl(scan.page.url),
+      // Full URL for the sidebar Source block only (FR-42); never written to the file.
+      displayUrl: cleanUrl(scan.page.url) ?? "",
       hostname: cleanText(scan.page.hostname, 253),
       scannedAt,
       extVersion,

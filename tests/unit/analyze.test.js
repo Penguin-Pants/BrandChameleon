@@ -180,6 +180,27 @@ test("percentage radius is ignored, font size keeps 2 decimals, icon sizes use t
   );
 });
 
+test("body-sm counts only elements that hold text", () => {
+  const small = ["Inter", "14px", "400", "20px", "normal"];
+  const withEmpty = analyze(
+    scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 0)", { font: small, count: 3, textLen: 10, textCount: 1 })] }),
+    CONTEXT,
+  );
+  assert.equal(withEmpty.typography["body-sm"], undefined);
+  const withText = analyze(
+    scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 0)", { font: small, count: 3, textLen: 30, textCount: 3 })] }),
+    CONTEXT,
+  );
+  assert.equal(withText.typography["body-sm"].fontSize, 14);
+});
+
+test("the Source block keeps the full URL; the file does not (FR-35, FR-42)", () => {
+  const model = analyze(scan({ page: { url: "https://acme.example/app?view=pricing#plans" }, records: [text("rgb(0, 0, 0)")] }), CONTEXT);
+  assert.equal(model.source.url, "https://acme.example/app");
+  assert.equal(model.source.displayUrl, "https://acme.example/app?view=pricing#plans");
+  assert.ok(!generate(model, initialEdits(model)).includes("view=pricing"));
+});
+
 test("a page with only html and body raises no-content", () => {
   assert.throws(() => analyze(scan(), CONTEXT), (error) => error instanceof ScanError && error.code === "no-content");
 });

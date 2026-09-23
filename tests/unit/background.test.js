@@ -112,6 +112,23 @@ test("errors map to restricted, changed and no-content", async () => {
   assert.equal(storage["scan:3"].error, "no-content");
 });
 
+test("a tab that navigates after collection reports a changed page", async () => {
+  reset();
+  behavior.tabsGet = async (id) => ({ id, url: "https://other.example/" });
+  await clickListener(TAB);
+  assert.equal(storage["scan:3"].error, "changed");
+
+  reset();
+  behavior.tabsGet = async (id) => ({ id, url: "https://acme.example/#section" });
+  await clickListener(TAB);
+  assert.equal(storage["scan:3"].status, "done", "a fragment change is the same document");
+
+  reset();
+  behavior.tabsGet = async (id) => ({ id });
+  await clickListener(TAB);
+  assert.equal(storage["scan:3"].status, "done", "no URL to compare means accept");
+});
+
 test("a scan that runs past 15 s stores the timeout error", async () => {
   reset();
   mock.timers.enable({ apis: ["setTimeout"] });

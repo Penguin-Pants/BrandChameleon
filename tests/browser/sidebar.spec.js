@@ -192,6 +192,12 @@ test("AC-28 reloading restores the review, text edits and dirty flag", async ({ 
   expect((await stored(page, "review:1")).dirty).toBe(true);
 });
 
+test("FR-42 the Source block shows the full URL in its title", async ({ page }) => {
+  const full = { ...model, source: { ...model.source, displayUrl: "https://acme.example/app?view=pricing#plans" } };
+  await openSidebar(page, { "scan:1": done("u", full) });
+  await expect(page.locator(".source-host")).toHaveAttribute("title", "https://acme.example/app?view=pricing#plans");
+});
+
 test("AC-29 each window keeps its own review", async ({ page }) => {
   const other = { ...model, name: "Window Two" };
   await openSidebar(page, { "scan:1": done("a"), "scan:2": done("b", other) }, { windowId: 2 });

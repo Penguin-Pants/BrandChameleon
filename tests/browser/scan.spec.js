@@ -11,7 +11,7 @@ import { COLLECTOR_OPTIONS, scanFixture } from "../support/scan.js";
 const CONTEXT = { scannedAt: "2026-09-23T12:00:00.000Z", extVersion: "0.1.0" };
 const FIXTURES = [
   "brand-basic", "mono", "framework-leftover", "overlay", "hidden", "shadow",
-  "cross-origin", "sparse", "classify", "large", "logos", "clobber",
+  "cross-origin", "sparse", "classify", "large", "logos", "clobber", "wide", "many-props",
 ];
 
 async function analyzeFixture(page, name) {
@@ -208,6 +208,14 @@ test("FR-10 a huge sibling list stays within the node limit", async ({ page }) =
   expect(Date.now() - start).toBeLessThan(3000);
   expect(scan.limits.capped).toBe(true);
   expect(scan.limits.visited).toBeLessThanOrEqual(50000);
+  // Depth-first order: the early nested button is read before later siblings.
+  expect(analyze(scan, CONTEXT).candidates.map((c) => c.hex)).toContain("#E4002B");
+});
+
+test("FR-13 a brand custom property after 500 others still counts", async ({ page }) => {
+  const { scan, model } = await analyzeFixture(page, "many-props");
+  expect(scan.customProps.length).toBeGreaterThan(600);
+  expect(roleHexes(model).primary).toBe("#E4002B");
 });
 
 test("AC-32 large page stays fast and small", async ({ page }) => {

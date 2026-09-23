@@ -77,41 +77,52 @@ export async function collectPage(options) {
   const addRecord = (record, textLength) => {
     const key = JSON.stringify(record);
     const existing = records.get(key);
+    const withText = textLength > 0 ? 1 : 0;
     if (existing) {
       existing.count += 1;
       existing.textLen += textLength;
+      existing.textCount += withText;
     } else {
-      records.set(key, { ...record, count: 1, textLen: textLength, first: order });
+      records.set(key, { ...record, count: 1, textLen: textLength, textCount: withText, first: order });
     }
     order += 1;
   };
 
-  const stack = [];
-  // Pushes children in reverse so they pop in DOM order. Stops at the
-  // remaining visit budget, so a huge sibling list is never copied whole.
+  // Depth-first walk with lazy child iteration. Each frame reads its live
+  // child lists (light DOM, then open shadow root) by index, so DOM order
+  // holds under the limits and no sibling list is ever copied.
+  const frames = [];
   const pushChildren = (parent, context) => {
-    const budget = maxVisitedNodes - visited - stack.length;
-    const children = [];
-    for (const list of [parent.children, parent.shadowRoot?.children]) {
-      if (!list) continue;
-      for (let i = 0; i < list.length; i += 1) {
-        if (children.length >= budget) {
-          capped = true;
-          break;
-        }
-        children.push(list[i]);
-      }
-    }
-    for (let i = children.length - 1; i >= 0; i -= 1) stack.push({ el: children[i], ...context });
+    const lists = [parent.children, parent.shadowRoot?.children].filter(
+      (list) => list && typeof list.length === "number",
+    );
+    if (lists.length) frames.push({ lists, list: 0, index: 0, context });
   };
-  pushChildren(document.documentElement.parentNode, { parentBg: null, inNav: false, inHomeLink: false });
+  const nextEntry = () => {
+    while (frames.length) {
+      const frame = frames[frames.length - 1];
+      const list = frame.lists[frame.list];
+      if (frame.index < list.length) {
+        const el = list[frame.index];
+        frame.index += 1;
+        return { el, ...frame.context };
+      }
+      frame.list += 1;
+      frame.index = 0;
+      if (frame.list >= frame.lists.length) frames.pop();
+    }
+    return null;
+  };
+  pushChildren(document, { parentBg: null, inNav: false, inHomeLink: false });
 
-  while (stack.length) {
+  for (;;) {
+    const entry = nextEntry();
+    if (!entry) break;
     if (visible >= maxVisibleElements || visited >= maxVisitedNodes) {
       capped = true;
       break;
     }
-    const { el, parentBg, inNav, inHomeLink } = stack.pop();
+    const { el, parentBg, inNav, inHomeLink } = entry;
     visited += 1;
     try {
       const tag = el.localName.toLowerCase();
@@ -271,7 +282,6 @@ export async function collectPage(options) {
   for (const sheet of document.styleSheets) readSheet(sheet);
   const rootStyle = getComputedStyle(document.documentElement);
   const customProps = [...names]
-    .slice(0, 500)
     .map((name) => ({ name, value: rootStyle.getPropertyValue(name).trim() }))
     .filter((prop) => prop.value && prop.value.length <= 100);
 

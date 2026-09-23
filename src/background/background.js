@@ -37,6 +37,20 @@ async function runCollector(tabId) {
   return injection.result;
 }
 
+const withoutHash = (url) => (url ?? "").split("#")[0];
+
+/** Throws "changed" when the tab now shows another document than the one scanned. */
+async function assertSamePage(tabId, scannedUrl) {
+  let current;
+  try {
+    current = await browser.tabs.get(tabId);
+  } catch {
+    throw new ScanError("changed");
+  }
+  // Without a URL (permission lost) there is nothing to compare, so accept.
+  if (current.url && withoutHash(current.url) !== withoutHash(scannedUrl)) throw new ScanError("changed");
+}
+
 async function errorCode(error, tab) {
   if (error instanceof ScanError) return error.code;
   if (/navigat|closed|destroyed|no tab|aborted|unloaded/i.test(String(error?.message ?? error))) return "changed";
@@ -61,6 +75,7 @@ export async function startScan(tab) {
   let result;
   try {
     const scan = await withTimeout(runCollector(tab.id), SCAN_TIMEOUT_MS);
+    await assertSamePage(tab.id, scan.page.url);
     const model = analyze(scan, {
       scannedAt: new Date().toISOString(),
       extVersion: browser.runtime.getManifest().version,

@@ -423,7 +423,11 @@ function buildReview() {
     sectionBlock(
       "source",
       "Source",
-      h("p", { class: "source-host", title: model.source.url || null }, model.source.hostname || "Local page"),
+      h(
+        "p",
+        { class: "source-host", title: model.source.displayUrl || model.source.url || null },
+        model.source.hostname || "Local page",
+      ),
       h("p", { class: "muted" }, "Scanned ", h("time", { datetime: model.source.scannedAt }, scanned.toLocaleString())),
     ),
     sectionBlock("name", "Name", h("label", { for: "name-input" }, "Company name", name)),
