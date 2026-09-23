@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Hidden Test</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 400 16px/24px sans-serif; }
+  .btn { display: inline-block; background: #635bff; color: #ffffff; padding: 12px 24px; text-decoration: none; }
+  .none { display: none; background: #ff0000; }
+  .invisible { visibility: hidden; background: #00ff00; padding: 20px; }
+  .invisible .shown { visibility: visible; background: #800080; color: #ffffff; }
+  .faded { opacity: 0; background: #0000ff; padding: 20px; }
+  .zero { width: 0; height: 0; overflow: hidden; background: #ffa500; }
+</style></head>
+<body>
+  <main>
+    <h1>Hidden Test</h1>
+    <p>Visible text.</p>
+    <a class="btn" href="/go">Go</a>
+    <div class="none"><a class="btn" href="/x" style="background:#ff0000">Hidden</a></div>
+    <div class="invisible">Hidden text<div class="shown">Shown child</div></div>
+    <div class="faded"><span style="background:#0000ff">Faded</span></div>
+    <div class="zero">Zero</div>
+  </main>
+</body></html>

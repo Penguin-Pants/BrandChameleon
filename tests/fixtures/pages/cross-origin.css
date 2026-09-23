@@ -1,0 +1,3 @@
+:root { --brand-primary: #123456; }
+body { margin: 0; background: #ffffff; color: #1a1f36; font: 400 16px/24px sans-serif; }
+.btn { display: inline-block; background: #635bff; color: #ffffff; padding: 12px 24px; text-decoration: none; }

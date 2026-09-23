@@ -1,0 +1,32 @@
+{
+  "name": "brandchameleon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Firefox extension that scans a website's styles and downloads a DESIGN.md file.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:browser",
+    "test:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:browser": "playwright test",
+    "lint": "npm run lint:ext && npm run lint:js",
+    "lint:ext": "node scripts/check-ext-lint.mjs",
+    "lint:js": "eslint .",
+    "build": "web-ext build --source-dir src --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "assets": "node scripts/render-assets.mjs",
+    "start": "web-ext run --source-dir src"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@google/design.md": "0.4.0",
+    "@playwright/test": "1.56.1",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
+    "web-ext": "10.7.0",
+    "yaml": "2.9.1"
+  }
+}

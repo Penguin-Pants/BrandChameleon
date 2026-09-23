@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shadow Test</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 400 16px/24px sans-serif; }
+</style></head>
+<body>
+  <main>
+    <h1>Shadow Test</h1>
+    <p>Web components hold the buttons on this page.</p>
+    <open-widget></open-widget>
+    <closed-widget></closed-widget>
+  </main>
+  <script>
+    customElements.define("open-widget", class extends HTMLElement {
+      constructor() {
+        super();
+        const root = this.attachShadow({ mode: "open" });
+        root.innerHTML = '<style>button{background:#e4002b;color:#fff;padding:12px 24px;border:0}</style><button>Open action</button>';
+      }
+    });
+    customElements.define("closed-widget", class extends HTMLElement {
+      constructor() {
+        super();
+        const root = this.attachShadow({ mode: "closed" });
+        root.innerHTML = '<style>button{background:#00aa55;color:#fff;padding:12px 24px;border:0}</style><button>Closed action</button>';
+      }
+    });
+  </script>
+</body></html>
