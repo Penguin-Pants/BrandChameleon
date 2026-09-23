@@ -86,7 +86,7 @@ Design tokens for Acme Corp, measured from the computed styles of http://127.0.0
 - **Secondary (#00D4FF):** 8 other uses. Declared as `--brand-accent`.
 - **Neutral (#E3E8EE):** 5 other uses. Declared as `--line`.
 - **Surface (#FFFFFF):** Background of 2 large areas, background of 1 navigation area, text of 3 buttons and 1 other use.
-- **On-surface (#1A1F36):** Text of 5 links, text of 6 headings and 8 other uses. Declared as `--ink`.
+- **On-surface (#1A1F36):** Text of 5 links, text of 6 headings and 9 other uses. Declared as `--ink`.
 - **On-primary (#FFFFFF):** Background of 2 large areas, background of 1 navigation area, text of 3 buttons and 1 other use.
 
 ## Typography

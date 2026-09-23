@@ -103,7 +103,7 @@ function collectColorUses(records) {
     if (record.color) {
       const use = { button: "buttonText", link: "linkText", heading: "headingText" }[record.kind];
       if (use) info.text = addUse(record.color, use, record);
-      else if (record.textLen > 0) info.text = addUse(record.color, "other", record);
+      else if (record.textLen > 0 || record.kind === "input") info.text = addUse(record.color, "other", record);
       else info.text = normalizeColor(record.color);
     }
     if (info.text && record.textLen > 0) {
@@ -240,8 +240,31 @@ function assignRoles({ clusters, memberOf, textByHex, parsed, backgrounds }) {
 
 // Typography -------------------------------------------------------------
 
-function firstFamily(stack) {
-  return cleanFontFamily((stack ?? "").split(",")[0] ?? "");
+/** Splits a CSS font-family list on commas outside quotes. Removes quotes and escapes. */
+export function splitFontStack(stack) {
+  const families = [];
+  let current = "";
+  let quote = null;
+  const text = stack ?? "";
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === "\\" && i + 1 < text.length) {
+      current += text[i + 1];
+      i += 1;
+    } else if (quote) {
+      if (char === quote) quote = null;
+      else current += char;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === ",") {
+      families.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  families.push(current.trim());
+  return families.filter(Boolean);
 }
 
 function typographyLevel(group) {
@@ -252,10 +275,11 @@ function typographyLevel(group) {
   const lineHeightPx = pxNumber(lineHeight);
   const letterSpacingPx = pxNumber(letterSpacing);
   const tags = tally(group.items, (r) => r.tag, (r) => r.count);
+  const families = splitFontStack(stack).map(cleanFontFamily).filter(Boolean);
   return {
     styleKey: group.key,
-    family: firstFamily(stack),
-    stack: (stack ?? "").split(",").map(cleanFontFamily).filter(Boolean).join(", "),
+    family: families[0] ?? "",
+    stack: families.join(", "),
     fontSize: sizePx,
     fontWeight: weightNumber,
     lineHeight: lineHeightPx ? round(lineHeightPx / sizePx, 2) : null,
@@ -422,6 +446,18 @@ function analyzeComponents({ parsed, clusterOf, roles }) {
   return components;
 }
 
+/** Hex values of component source clusters that are not review candidates. */
+function componentColors(components, top, clusters) {
+  const ids = new Set();
+  for (const component of Object.values(components)) {
+    for (const id of [component.bg, component.text, component.border?.color]) if (id) ids.add(id);
+  }
+  const shown = new Set(top.map((c) => c.id));
+  return Object.fromEntries(
+    clusters.filter((c) => ids.has(c.id) && !shown.has(c.id)).map((c) => [c.id, c.hex]),
+  );
+}
+
 // Shadows and logos ------------------------------------------------------
 
 function analyzeShadows(records) {
@@ -508,6 +544,7 @@ export function analyze(scan, { scannedAt, extVersion }) {
   };
 
   const top = clusters.filter((c) => c.weight > 0).slice(0, MAX_CANDIDATES);
+  const components = analyzeComponents({ parsed, clusterOf, roles });
   const extraRoles = Object.values(roles).filter((c) => c && !top.includes(c));
   const candidates = [...new Set([...top, ...extraRoles])]
     .map((c) => ({
@@ -534,7 +571,8 @@ export function analyze(scan, { scannedAt, extVersion }) {
     typography: analyzeTypography(records, isPrimaryButton),
     rounded: analyzeRounded(records),
     spacing: analyzeSpacing(records),
-    components: analyzeComponents({ parsed, clusterOf, roles }),
+    components,
+    componentColors: componentColors(components, top, clusters),
     shadows: analyzeShadows(records),
     logos: analyzeLogos(scan.page, scan.logoImages),
     notes: {

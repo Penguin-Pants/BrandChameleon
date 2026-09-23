@@ -134,6 +134,15 @@ test("low contrast produces Don't rules (FR-39)", () => {
   assert.match(markdown, /- Don't use on-primary text on primary backgrounds for normal-size text \(\d\.\d\d:1, below the WCAG AA minimum of 4\.5:1\)\./);
 });
 
+test("no WCAG claim over a translucent background", () => {
+  const model = baseModel();
+  const edits = initialEdits(model);
+  edits.roles.surface = { hex: "#FFFFFF80" };
+  const markdown = generate(model, edits);
+  assert.ok(!markdown.includes("on-surface text with surface backgrounds"));
+  assert.ok(!markdown.includes("on-surface text on surface backgrounds"));
+});
+
 test("logo None removes Brand Assets; a logo adds it last (FR-39)", () => {
   const model = baseModel({ page: { icons: [{ rel: "icon", href: "https://acme.example/i.png", sizes: "32x32", type: "" }] } });
   const edits = initialEdits(model);
@@ -165,5 +174,10 @@ test("raw markdown checks (FR-47)", () => {
   assert.deepEqual(checkRawMarkdown('---\nname: "A"\n---\n# A\n'), []);
   assert.deepEqual(checkRawMarkdown("# A\n"), ["The file must start with a --- line."]);
   assert.deepEqual(checkRawMarkdown('---\nname: "A"\n# A\n'), ["The front matter needs a closing --- line."]);
-  assert.deepEqual(checkRawMarkdown('---\nname: ""\n---\n'), ["The front matter needs a name: line with a value."]);
+  const missing = ["The front matter needs a name: line with a value."];
+  for (const value of ['""', "''", "", "~", "null", "NULL", "# comment only"]) {
+    assert.deepEqual(checkRawMarkdown(`---\nname: ${value}\n---\n`), missing, value);
+  }
+  assert.deepEqual(checkRawMarkdown('---\nname: "Acme #1" # note\n---\n'), []);
+  assert.deepEqual(checkRawMarkdown("---\nname: Nullify\n---\n"), []);
 });

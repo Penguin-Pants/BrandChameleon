@@ -189,6 +189,15 @@ test("FR-06 no visible content raises a scan error", async ({ page }) => {
   expect(() => analyze(scan, CONTEXT)).toThrow(ScanError);
 });
 
+test("FR-10 a huge sibling list stays within the node limit", async ({ page }) => {
+  await page.goto("/tests/fixtures/pages/wide.html");
+  const start = Date.now();
+  const scan = await page.evaluate(collectPage, COLLECTOR_OPTIONS);
+  expect(Date.now() - start).toBeLessThan(3000);
+  expect(scan.limits.capped).toBe(true);
+  expect(scan.limits.visited).toBeLessThanOrEqual(50000);
+});
+
 test("AC-32 large page stays fast and small", async ({ page }) => {
   await page.goto("/tests/fixtures/pages/large.html");
   const start = Date.now();

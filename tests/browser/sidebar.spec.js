@@ -17,9 +17,9 @@ test.beforeAll(async ({ browser }) => {
 
 const done = (scanId = "s1", m = model) => ({ status: "done", scanId, hostname: m.source.hostname, model: m });
 
-async function openSidebar(page, initial = {}, { windowId = 1, width = 360 } = {}) {
+async function openSidebar(page, initial = {}, { windowId = 1, width = 360, writeDuringFirstGet = null } = {}) {
   await page.setViewportSize({ width, height: 900 });
-  await page.addInitScript(installMockBrowser, { initial });
+  await page.addInitScript(installMockBrowser, { initial, writeDuringFirstGet });
   await page.goto(`/src/sidebar/sidebar.html?window=${windowId}`);
 }
 
@@ -43,6 +43,12 @@ test("AC-04 empty state", async ({ page }) => {
   await openSidebar(page);
   await expect(page.locator("#view-empty")).toBeVisible();
   await expect(page.locator("#view-empty")).toHaveText("Click the BrandChameleon toolbar button to scan the current page.");
+});
+
+test("a scan that finishes while the sidebar starts is not missed", async ({ page }) => {
+  await openSidebar(page, {}, { writeDuringFirstGet: { "scan:1": done("race") } });
+  await expect(page.locator("#view-review")).toBeVisible();
+  await expect(page.locator("#name-input")).toHaveValue("Acme Corp");
 });
 
 test("AC-05 restricted page error, loading state and sidebar timeout", async ({ page }) => {

@@ -524,16 +524,21 @@ async function download() {
 async function init() {
   const current = await browser.windows.getCurrent();
   state.windowId = current.id;
-  const stored = await browser.storage.session.get([scanKey(), reviewKey()]);
-  state.scan = stored[scanKey()] ?? null;
-  state.review = stored[reviewKey()] ?? null;
-  if (state.review) buildReview();
-  $("download").addEventListener("click", download);
+  // Listen before the first read, so a scan that ends in between is not lost.
+  let ready = false;
+  let changedEarly = false;
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== "session" || !(scanKey() in changes)) return;
     state.scan = changes[scanKey()].newValue ?? null;
-    onScanChanged().catch((error) => console.error("[BrandChameleon]", error));
+    changedEarly = !ready;
+    if (ready) onScanChanged().catch((error) => console.error("[BrandChameleon]", error));
   });
+  const stored = await browser.storage.session.get([scanKey(), reviewKey()]);
+  if (!changedEarly) state.scan = stored[scanKey()] ?? null;
+  state.review = stored[reviewKey()] ?? null;
+  if (state.review) buildReview();
+  $("download").addEventListener("click", download);
+  ready = true;
   await onScanChanged();
 }
 

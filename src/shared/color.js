@@ -313,17 +313,38 @@ export function oklchChroma(hex) {
   return Math.hypot(a, b);
 }
 
-/** WCAG 2 relative luminance of an opaque color. */
-export function relativeLuminance(hex) {
-  const { r, g, b } = hexToRgba(hex);
+function luminance({ r, g, b }) {
   const [lr, lg, lb] = [r, g, b].map(srgbToLinear);
   return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
 }
 
-export function contrastRatio(hexA, hexB) {
-  const la = relativeLuminance(hexA);
-  const lb = relativeLuminance(hexB);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+/** Paints `top` over an opaque `bottom` color. */
+function composite(top, bottom) {
+  const mix = (t, b) => t * top.a + b * (1 - top.a);
+  return { r: mix(top.r, bottom.r), g: mix(top.g, bottom.g), b: mix(top.b, bottom.b), a: 1 };
+}
+
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+/** WCAG 2 relative luminance. A translucent color is painted over white. */
+export function relativeLuminance(hex) {
+  return luminance(composite(hexToRgba(hex), WHITE));
+}
+
+export function isOpaque(hex) {
+  return hexToRgba(hex).a === 1;
+}
+
+/**
+ * WCAG 2 contrast of a foreground painted over a background. A translucent
+ * background is painted over white first.
+ */
+export function contrastRatio(foregroundHex, backgroundHex) {
+  const background = composite(hexToRgba(backgroundHex), WHITE);
+  const foreground = composite(hexToRgba(foregroundHex), background);
+  const lf = luminance(foreground);
+  const lb = luminance(background);
+  return (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05);
 }
 
 export function isValidHexInput(value) {

@@ -12,9 +12,13 @@ export function checkRawMarkdown(text) {
     failures.push("The front matter needs a closing --- line.");
     return failures;
   }
-  const hasName = lines
-    .slice(1, end)
-    .some((line) => /^name:\s*\S/.test(line) && !/^name:\s*(""|'')\s*$/.test(line));
+  const hasName = lines.slice(1, end).some((line) => {
+    const match = /^name:(.*)$/.exec(line);
+    if (!match) return false;
+    // Drop a trailing comment, then reject YAML empty and null forms.
+    const value = match[1].replace(/(^|\s)#.*$/, "").trim();
+    return !["", '""', "''", "~", "null", "Null", "NULL"].includes(value);
+  });
   if (!hasName) failures.push("The front matter needs a name: line with a value.");
   return failures;
 }

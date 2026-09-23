@@ -1,7 +1,12 @@
 // A small stand-in for the WebExtension `browser` API used by the sidebar.
 // Installed with page.addInitScript(installMockBrowser, options). Session
 // storage lives in the page's sessionStorage, so it survives a reload.
-export function installMockBrowser({ initial = {}, version = "0.1.0", pathIncludes = "/src/sidebar/" } = {}) {
+export function installMockBrowser({
+  initial = {},
+  version = "0.1.0",
+  pathIncludes = "/src/sidebar/",
+  writeDuringFirstGet = null,
+} = {}) {
   if (!location.pathname.includes(pathIncludes)) return;
   const KEY = "__mockSessionStorage";
   const read = () => JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
@@ -25,6 +30,11 @@ export function installMockBrowser({ initial = {}, version = "0.1.0", pathInclud
       session: {
         get: async (keys) => {
           const data = read();
+          if (writeDuringFirstGet && !window.__mockRaceDone) {
+            // The value lands after the snapshot is taken, like a real race.
+            window.__mockRaceDone = true;
+            write(writeDuringFirstGet);
+          }
           const list = Array.isArray(keys) ? keys : [keys];
           return Object.fromEntries(list.filter((k) => k in data).map((k) => [k, data[k]]));
         },

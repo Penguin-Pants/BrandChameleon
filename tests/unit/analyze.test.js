@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyze, ScanError } from "../../src/shared/analyze.js";
+import { analyze, ScanError, splitFontStack } from "../../src/shared/analyze.js";
+import { generate } from "../../src/shared/generate.js";
+import { initialEdits } from "../../src/shared/review.js";
 import { button, CONTEXT, link, record, scan, text } from "../support/synthetic.js";
 
 const roleHex = (model, role) => model.candidates.find((c) => c.id === model.roles[role])?.hex ?? null;
@@ -105,6 +107,50 @@ test("white can be both surface and on-primary (FR-25)", () => {
   );
   assert.equal(roleHex(model, "surface"), "#FFFFFF");
   assert.equal(roleHex(model, "on-primary"), "#FFFFFF");
+});
+
+test("form control text colors count as color uses", () => {
+  const model = analyze(
+    scan({ records: [text("rgb(0, 0, 0)"), record({ kind: "input", tag: "input", color: "rgb(12, 34, 56)" })] }),
+    CONTEXT,
+  );
+  assert.ok(model.candidates.some((c) => c.hex === "#0C2238"));
+});
+
+test("font stacks keep quoted commas together", () => {
+  assert.deepEqual(splitFontStack('"A, Font", Arial, sans-serif'), ["A, Font", "Arial", "sans-serif"]);
+  assert.deepEqual(splitFontStack("'Söhne Var', \\\"Quoted\\\" , serif"), ["Söhne Var", '"Quoted"', "serif"]);
+  const model = analyze(
+    scan({ records: [text("rgb(0, 0, 0)", { font: ['"A, Font", Arial', "16px", "400", "24px", "normal"] })] }),
+    CONTEXT,
+  );
+  // FR-40 removes the comma, but the family is no longer cut at it.
+  assert.equal(model.typography["body-md"].family, "A Font");
+  assert.equal(model.typography["body-md"].stack, "A Font, Arial");
+});
+
+test("component colors outside the 12-candidate palette are kept", () => {
+  const busy = Array.from({ length: 14 }, (_, i) =>
+    record({ bg: `hsl(${i * 25}, 90%, 50%)`, count: 20, largeBg: false }),
+  );
+  const model = analyze(
+    scan({
+      records: [
+        text("rgb(0, 0, 0)"),
+        button("rgb(99, 91, 255)", "rgb(255, 255, 255)", { count: 30 }),
+        button("rgb(10, 120, 60)", "rgb(250, 240, 200)", { border: [2, "dashed", "rgb(200, 30, 90)"] }),
+        ...busy,
+      ],
+    }),
+    CONTEXT,
+  );
+  const secondary = model.components["button-secondary"];
+  assert.ok(!model.candidates.some((c) => c.id === secondary.bg), "button color is outside the palette");
+  const markdown = generate(model, initialEdits(model));
+  const block = markdown.split("\n  button-secondary:\n")[1].split(/\n {2}\S/)[0];
+  assert.match(block, /backgroundColor: "#0A783C"/);
+  assert.match(block, /textColor: "#FAF0C8"/);
+  assert.ok(markdown.includes("2px dashed #C81E5A border"));
 });
 
 test("a page with only html and body raises no-content", () => {

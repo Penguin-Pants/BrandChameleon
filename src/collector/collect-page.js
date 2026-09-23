@@ -80,9 +80,21 @@ export async function collectPage(options) {
   };
 
   const stack = [];
+  // Pushes children in reverse so they pop in DOM order. Stops at the
+  // remaining visit budget, so a huge sibling list is never copied whole.
   const pushChildren = (parent, context) => {
-    const children = [...parent.children];
-    if (parent.shadowRoot) children.push(...parent.shadowRoot.children);
+    const budget = maxVisitedNodes - visited - stack.length;
+    const children = [];
+    for (const list of [parent.children, parent.shadowRoot?.children]) {
+      if (!list) continue;
+      for (let i = 0; i < list.length; i += 1) {
+        if (children.length >= budget) {
+          capped = true;
+          break;
+        }
+        children.push(list[i]);
+      }
+    }
     for (let i = children.length - 1; i >= 0; i -= 1) stack.push({ el: children[i], ...context });
   };
   pushChildren(document.documentElement.parentNode, { parentBg: null, inNav: false, inHomeLink: false });

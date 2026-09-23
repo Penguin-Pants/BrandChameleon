@@ -1,6 +1,6 @@
 // Builds the DESIGN.md text from a model and review edits (FR-33 to FR-41).
 // Pure and deterministic: the same inputs give byte-identical output.
-import { contrastRatio, oklchChroma, relativeLuminance } from "./color.js";
+import { contrastRatio, isOpaque, oklchChroma, relativeLuminance } from "./color.js";
 import { DARK_SURFACE_LUMINANCE, NEUTRAL_CHROMA, ROLE_ORDER, TYPE_LEVELS, WCAG_AA } from "./constants.js";
 import { roleHex } from "./review.js";
 import { cleanFontFamily, cleanName } from "./sanitize.js";
@@ -59,6 +59,8 @@ function useSummary(candidate) {
 
 function buildContext(model, edits) {
   const candidate = (id) => model.candidates.find((c) => c.id === id) ?? null;
+  // Component colors can come from clusters outside the review palette.
+  const hexOf = (id) => candidate(id)?.hex ?? model.componentColors?.[id] ?? null;
   const colors = {};
   for (const role of ROLE_ORDER) {
     const hex = roleHex(model, edits, role);
@@ -90,7 +92,7 @@ function buildContext(model, edits) {
     for (const role of [...preferred, ...ROLE_ORDER]) {
       if (roleMatches(role, id)) return { ref: `{colors.${role}}`, label: `${role} (${colors[role]})`, hex: colors[role] };
     }
-    const hex = candidate(id)?.hex;
+    const hex = hexOf(id);
     return hex ? { literal: hex, label: hex, hex } : null;
   };
 
@@ -110,7 +112,7 @@ function buildContext(model, edits) {
     return { ref: `{typography.${level}}`, label: level };
   };
 
-  return { candidate, colors, levels, rounded, spacing, colorValue, radiusValue, typographyRef };
+  return { candidate, hexOf, colors, levels, rounded, spacing, colorValue, radiusValue, typographyRef };
 }
 
 function paddingProse(padding) {
@@ -152,7 +154,7 @@ function buildComponents(model, edits, ctx) {
     const uniform = padding && padding.every((side) => side === padding[0]);
     const type = ctx.typographyRef("label-md", button.fontKey);
     const border = button.border
-      ? `${px(button.border.width)} ${button.border.style} ${ctx.candidate(button.border.color)?.hex ?? ""} border`.replace("  ", " ")
+      ? `${px(button.border.width)} ${button.border.style} ${ctx.hexOf(button.border.color) ?? ""} border`.replace("  ", " ")
       : null;
     add(
       name,
@@ -357,7 +359,8 @@ function body(model, edits, ctx, components) {
   const onSurface = ctx.colors["on-surface"];
   const buttonPrimary = components.find((c) => c.name === "button-primary");
   if (buttonPrimary && primary) rules.push(`- Do use primary (${primary}) for primary button backgrounds.`);
-  if (primary && onPrimary) {
+  // WCAG claims need an opaque background; a translucent one has an unknown backdrop.
+  if (primary && onPrimary && isOpaque(primary)) {
     const r = contrastRatio(onPrimary, primary);
     rules.push(
       r >= WCAG_AA
@@ -365,7 +368,7 @@ function body(model, edits, ctx, components) {
         : `- Don't use on-primary text on primary backgrounds for normal-size text (${ratio(r)}, below the WCAG AA minimum of 4.5:1).`,
     );
   }
-  if (surface && onSurface) {
+  if (surface && onSurface && isOpaque(surface)) {
     const r = contrastRatio(onSurface, surface);
     rules.push(
       r >= WCAG_AA
@@ -373,7 +376,7 @@ function body(model, edits, ctx, components) {
         : `- Don't use on-surface text on surface backgrounds for normal-size text (${ratio(r)}, below the WCAG AA minimum of 4.5:1).`,
     );
   }
-  if (primary && surface) {
+  if (primary && surface && isOpaque(surface)) {
     const r = contrastRatio(primary, surface);
     if (r < WCAG_AA) rules.push(`- Don't use primary for body text on surface (${ratio(r)}, below 4.5:1).`);
   }

@@ -88,6 +88,12 @@ test("OKLab distance, chroma and contrast", () => {
   assert.equal(contrastRatio("#FFFFFF", "#FFFFFF").toFixed(2), "1.00");
 });
 
+test("contrast paints translucent colors before measuring", () => {
+  // Alpha 0x80 (0.502) black over white renders as #7F7F7F: 4.00:1, not 21:1.
+  assert.equal(contrastRatio("#00000080", "#FFFFFF").toFixed(2), "4.00");
+  assert.equal(contrastRatio("#000000", "#FFFFFF80").toFixed(2), "21.00");
+});
+
 test("validates review hex input", () => {
   assert.ok(isValidHexInput("#abc"));
   assert.ok(isValidHexInput("#AABBCC"));
