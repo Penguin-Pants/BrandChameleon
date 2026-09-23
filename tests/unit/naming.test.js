@@ -45,6 +45,10 @@ test("file names (AC-19)", () => {
 test("sanitizers (FR-40)", () => {
   assert.equal(cleanName('Evil"\nname: x'), 'Evil" name: x');
   assert.equal(cleanName("a".repeat(150)).length, 100);
+  // Truncation never leaves half of a surrogate pair.
+  const emoji = cleanName(`${"A".repeat(99)}\u{1F600}`);
+  assert.equal(emoji, `${"A".repeat(99)}\u{1F600}`);
+  assert.ok(!/[\uD800-\uDBFF]$/.test(cleanName(`${"A".repeat(100)}\u{1F600}`)));
   assert.equal(cleanFontFamily('"Söhne Var"'), "Söhne Var");
   assert.equal(cleanFontFamily("Inter`**<b>\u0000"), "Interb");
   assert.equal(cleanFontFamily("x".repeat(80)).length, 64);

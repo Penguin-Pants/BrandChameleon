@@ -168,6 +168,8 @@ test("role input parsing (FR-44)", () => {
   assert.deepEqual(parseRoleInput(model, "#abc"), { hex: "#AABBCC" });
   assert.equal(parseRoleInput(model, "none"), null);
   assert.equal(parseRoleInput(model, "#12"), undefined);
+  assert.deepEqual(parseRoleInput(model, "#FFFFFF00"), { hex: "#FFFFFF00" });
+  assert.equal(parseRoleInput(model, null), undefined);
 });
 
 test("raw markdown checks (FR-47)", () => {

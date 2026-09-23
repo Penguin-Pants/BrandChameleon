@@ -4,9 +4,14 @@
 // eslint-disable-next-line no-control-regex
 const CONTROL_RE = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/g;
 
+/** Truncates by code points, so a surrogate pair is never split. */
+function truncate(value, maxLength) {
+  return Array.from(value).slice(0, maxLength).join("");
+}
+
 export function cleanText(value, maxLength = 200) {
   if (typeof value !== "string") return "";
-  return value.replace(CONTROL_RE, " ").replace(/\s+/g, " ").trim().slice(0, maxLength).trim();
+  return truncate(value.replace(CONTROL_RE, " ").replace(/\s+/g, " ").trim(), maxLength).trim();
 }
 
 export function cleanName(value) {
@@ -15,7 +20,7 @@ export function cleanName(value) {
 
 export function cleanFontFamily(value) {
   const unquoted = cleanText(value, 200).replace(/^["']|["']$/g, "");
-  return unquoted.replace(/[^\p{L}\p{N} \-_.']/gu, "").replace(/\s+/g, " ").trim().slice(0, 64).trim();
+  return truncate(unquoted.replace(/[^\p{L}\p{N} \-_.']/gu, "").replace(/\s+/g, " ").trim(), 64).trim();
 }
 
 export function cleanCustomPropertyName(value) {

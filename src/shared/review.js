@@ -1,5 +1,5 @@
 // Review edits on top of an analysis model (FR-43 to FR-45).
-import { isValidHexInput, normalizeColor } from "./color.js";
+import { isValidHexInput, parseColor, toHex } from "./color.js";
 import { ROLE_ORDER } from "./constants.js";
 import { fileNameFor } from "./naming.js";
 import { cleanName } from "./sanitize.js";
@@ -51,9 +51,11 @@ export function roleHex(model, edits, role) {
  * Returns undefined for invalid hex input, so the caller keeps the old value.
  */
 export function parseRoleInput(model, input) {
+  if (typeof input !== "string") return undefined;
   if (input === "none" || input === "") return null;
   if (model.candidates.some((c) => c.id === input)) return { candidate: input };
-  if (isValidHexInput(input)) return { hex: normalizeColor(input.trim()) };
+  // Keep the typed alpha, including fully transparent values.
+  if (isValidHexInput(input)) return { hex: toHex(parseColor(input.trim())) };
   return undefined;
 }
 

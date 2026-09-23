@@ -1,5 +1,5 @@
 // Review sidebar (section 7, FR-42 to FR-51).
-import { isValidHexInput, normalizeColor } from "../shared/color.js";
+import { isValidHexInput } from "../shared/color.js";
 import { ROLE_ORDER, SIDEBAR_SCAN_TIMEOUT_MS, TYPE_LEVELS } from "../shared/constants.js";
 import { generate } from "../shared/generate.js";
 import { checkRawMarkdown } from "../shared/raw-check.js";
@@ -280,7 +280,7 @@ function roleRow(role) {
     }
     hexInput.removeAttribute("aria-invalid");
     error.hidden = true;
-    setRole(normalizeColor(raw), hexInput);
+    setRole(raw, hexInput);
   });
   picker.addEventListener("input", () => setRole(picker.value, picker));
 

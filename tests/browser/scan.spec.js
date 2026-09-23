@@ -11,7 +11,7 @@ import { COLLECTOR_OPTIONS, scanFixture } from "../support/scan.js";
 const CONTEXT = { scannedAt: "2026-09-23T12:00:00.000Z", extVersion: "0.1.0" };
 const FIXTURES = [
   "brand-basic", "mono", "framework-leftover", "overlay", "hidden", "shadow",
-  "cross-origin", "sparse", "classify", "large", "logos",
+  "cross-origin", "sparse", "classify", "large", "logos", "clobber",
 ];
 
 async function analyzeFixture(page, name) {
@@ -182,6 +182,18 @@ test("FR-11 links with the parent background are links, filled links are buttons
   const { scan } = await analyzeFixture(page, "classify");
   const anchors = scan.records.filter((r) => r.tag === "a").map((r) => r.kind);
   expect(anchors).toEqual(["link", "button"]);
+});
+
+test("FR-29 percentage gaps are not spacing values", async ({ page }) => {
+  const { scan } = await analyzeFixture(page, "classify");
+  const gaps = scan.records.filter((r) => r.gap).flatMap((r) => r.gap);
+  expect(gaps.length).toBeGreaterThan(0);
+  expect(gaps.every((value) => value === null)).toBe(true);
+});
+
+test("DOM clobbering by form inputs does not break the scan", async ({ page }) => {
+  const { model } = await analyzeFixture(page, "clobber");
+  expect(roleHexes(model).primary).toBe("#E4002B");
 });
 
 test("FR-06 no visible content raises a scan error", async ({ page }) => {

@@ -280,7 +280,7 @@ function typographyLevel(group) {
     styleKey: group.key,
     family: families[0] ?? "",
     stack: families.join(", "),
-    fontSize: sizePx,
+    fontSize: round(sizePx, 2),
     fontWeight: weightNumber,
     lineHeight: lineHeightPx ? round(lineHeightPx / sizePx, 2) : null,
     letterSpacing: letterSpacingPx ? round(letterSpacingPx / sizePx, 3) || null : null,
@@ -394,7 +394,12 @@ function analyzeSpacing(records) {
 function analyzeComponents({ parsed, clusterOf, roles }) {
   const components = {};
   const primary = roles.primary;
-  const radiusOf = (r) => (r.radiusFull ? { full: true } : r.radius ? { px: round(pxNumber(r.radius) ?? 0, 2) } : null);
+  // Non-px radii other than "full" (for example "10%") are ignored (FR-28).
+  const radiusOf = (r) => {
+    if (r.radiusFull) return { full: true };
+    const value = pxNumber(r.radius);
+    return value ? { px: round(value, 2) } : null;
+  };
   const buttonStyle = (p) =>
     JSON.stringify([
       clusterOf(p.bg)?.id ?? null,
@@ -475,9 +480,10 @@ function analyzeShadows(records) {
     }));
 }
 
+/** Largest size in a `sizes` attribute such as "16x16 64x64". "any" ranks highest. */
 const sizeOf = (sizes) => {
-  const match = /(\d+)x(\d+)/i.exec(sizes ?? "");
-  return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
+  const found = [...(sizes ?? "").matchAll(/(\d+)x(\d+)/gi)].map((m) => ({ width: Number(m[1]), height: Number(m[2]) }));
+  return found.sort((a, b) => b.width - a.width)[0] ?? null;
 };
 
 function analyzeLogos(page, logoImages) {
@@ -492,7 +498,9 @@ function analyzeLogos(page, logoImages) {
 
   const relTokens = (icon) => icon.rel.split(/\s+/);
   const iconRank = (icon) =>
-    icon.type === "image/svg+xml" || /\.svg(\?|#|$)/i.test(icon.href) ? Infinity : sizeOf(icon.sizes)?.width ?? 0;
+    icon.type === "image/svg+xml" || /\.svg(\?|#|$)/i.test(icon.href) || /\bany\b/i.test(icon.sizes)
+      ? Infinity
+      : sizeOf(icon.sizes)?.width ?? 0;
   const byRank = (a, b) => iconRank(b) - iconRank(a);
   for (const icon of page.icons.filter((i) => relTokens(i).includes("apple-touch-icon")).sort(byRank)) {
     const size = sizeOf(icon.sizes);

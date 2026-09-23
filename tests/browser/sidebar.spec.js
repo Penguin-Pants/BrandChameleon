@@ -79,6 +79,8 @@ test("AC-21 name edits update the file name; empty name blocks download", async 
 });
 
 test("AC-22 color role edits and hex validation", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   await openSidebar(page, { "scan:1": done() });
   const neutralId = model.roles.neutral;
   await page.selectOption("#role-secondary", neutralId);
@@ -96,8 +98,12 @@ test("AC-22 color role edits and hex validation", async ({ page }) => {
   expect(await markdown(page)).toContain("- **Tertiary (#FF8800):** Set during review.");
   await expect(page.locator("#role-tertiary")).toHaveValue("custom");
 
+  await page.fill("#hex-tertiary", "#FFFFFF00");
+  expect(await markdown(page)).toContain('tertiary: "#FFFFFF00"');
+
   await page.selectOption("#role-tertiary", "none");
   expect(await markdown(page)).not.toContain("tertiary:");
+  expect(errors).toEqual([]);
   await expect(page.locator("#role-primary option[value=none]")).toHaveCount(0);
 });
 

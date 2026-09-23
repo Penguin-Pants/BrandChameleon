@@ -153,6 +153,33 @@ test("component colors outside the 12-candidate palette are kept", () => {
   assert.ok(markdown.includes("2px dashed #C81E5A border"));
 });
 
+test("percentage radius is ignored, font size keeps 2 decimals, icon sizes use the largest", () => {
+  const model = analyze(
+    scan({
+      page: {
+        icons: [
+          { rel: "icon", href: "https://acme.example/a.png", sizes: "16x16 64x64", type: "" },
+          { rel: "icon", href: "https://acme.example/b.png", sizes: "32x32", type: "" },
+        ],
+      },
+      records: [
+        text("rgb(0, 0, 0)", { font: ["Inter", "13.3333px", "400", "normal", "normal"] }),
+        button("rgb(99, 91, 255)", "rgb(255, 255, 255)", { radius: "10%" }),
+      ],
+    }),
+    CONTEXT,
+  );
+  assert.equal(model.components["button-primary"].radius, null);
+  assert.equal(model.typography["body-md"].fontSize, 13.33);
+  const markdown = generate(model, initialEdits(model));
+  assert.ok(markdown.includes('fontSize: "13.33px"'));
+  assert.ok(!markdown.includes("0px"));
+  assert.deepEqual(
+    model.logos.slice(0, 2).map((l) => [l.url, l.width]),
+    [["https://acme.example/a.png", 64], ["https://acme.example/b.png", 32]],
+  );
+});
+
 test("a page with only html and body raises no-content", () => {
   assert.throws(() => analyze(scan(), CONTEXT), (error) => error instanceof ScanError && error.code === "no-content");
 });
