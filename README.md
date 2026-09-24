@@ -127,7 +127,7 @@ AMO submission:
 1. Run `npm run lint`, `npm test` and the manual checklist.
 2. Run `npm run build`.
 3. Upload the zip on addons.mozilla.org. Select Firefox desktop only.
-4. Use the listing text, screenshots and reviewer notes in [amo/listing.md](amo/listing.md) and the policy in [PRIVACY.md](PRIVACY.md).
+4. Follow the answer sheet in [amo/listing.md](amo/listing.md). It gives every AMO form value in form order, the screenshots, the icon and the AMO version of the privacy policy ([amo/privacy-policy.md](amo/privacy-policy.md)).
 
 `web-ext lint` reports one expected warning, `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION`, because the extension supports Firefox ESR 140 on desktop only.
 

@@ -18,7 +18,7 @@ test("AC-02 manifest keys and permissions", async () => {
   const manifest = JSON.parse(await readFile(join(SRC, "manifest.json"), "utf8"));
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.name, "BrandChameleon: DESIGN.md Generator");
-  assert.equal(manifest.version, "0.1.0");
+  assert.equal(manifest.version, "1.0");
   assert.deepEqual(manifest.permissions, ["activeTab", "downloads", "scripting", "storage"]);
   for (const key of ["host_permissions", "optional_permissions", "optional_host_permissions", "content_scripts"]) {
     assert.ok(!(key in manifest), `${key} must not exist`);
@@ -71,12 +71,27 @@ async function pngSize(path) {
 test("AC-37 icons, screenshots, listing summary, privacy policy and license", async () => {
   for (const size of [48, 96, 128]) assert.deepEqual(await pngSize(join(SRC, `icons/icon-${size}.png`)), [size, size]);
   for (const shot of ["1-colors.png", "2-typography.png", "3-markdown.png"]) {
-    assert.deepEqual(await pngSize(join(ROOT, "amo/screenshots", shot)), [1280, 800]);
+    // AMO shows screenshots at 4:3; 2400 x 1800 is its full size.
+    assert.deepEqual(await pngSize(join(ROOT, "amo/screenshots", shot)), [2400, 1800]);
   }
   const listing = await readFile(join(ROOT, "amo/listing.md"), "utf8");
-  const summary = listing.split("## Summary (250 characters or fewer)\n\n")[1].split("\n")[0];
+  // The first ```text box after a marker line.
+  const box = (marker) => listing.split(marker)[1].split("```text\n")[1].split("\n```")[0];
+  const [name, summary, short] = [box("### Name\n"), box("### Summary\n"), box("at most 70 characters")];
   assert.ok(summary.length > 0 && summary.length <= 250, `summary is ${summary.length} characters`);
-  assert.match(await readFile(join(ROOT, "PRIVACY.md"), "utf8"), /collects no data/);
+  // With AMO's content-optimization switch, name and summary together are at most 70 characters.
+  assert.ok(name.length + short.length <= 70, `name and short summary are ${name.length + short.length} characters`);
+  // AMO removes headings and does not render tables in the privacy policy field.
+  const amoPolicy = await readFile(join(ROOT, "amo/privacy-policy.md"), "utf8");
+  assert.doesNotMatch(amoPolicy, /^(#|\|)/m);
+  for (const policy of [await readFile(join(ROOT, "PRIVACY.md"), "utf8"), amoPolicy]) {
+    assert.match(policy, /collects no data/);
+    // Logo thumbnails load page-declared image URLs, which can be on other servers,
+    // and the guessed /favicon.ico of the scanned site.
+    assert.match(policy, /IP address/);
+    assert.match(policy, /\/favicon\.ico/);
+    assert.doesNotMatch(policy, /any third party/);
+  }
   assert.match(await readFile(join(ROOT, "LICENSE"), "utf8"), /^MIT License/);
 });
 

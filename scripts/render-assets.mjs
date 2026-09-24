@@ -28,7 +28,7 @@ async function renderScreenshots(browser) {
   const scanPage = await browser.newPage({ baseURL: BASE });
   const model = analyze(await scanFixture(scanPage, "brand-basic"), {
     scannedAt: "2026-09-23T12:00:00.000Z",
-    extVersion: "0.1.0",
+    extVersion: "1.0",
   });
   await scanPage.close();
   model.source.url = "https://acme.example/";
@@ -42,7 +42,8 @@ async function renderScreenshots(browser) {
     { file: "3-markdown.png", scroll: "#h-markdown" },
   ];
   for (const shot of shots) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, baseURL: BASE });
+    // AMO shows screenshots at 4:3; 2400 x 1800 is its full size.
+    const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 2, baseURL: BASE });
     await page.addInitScript(installMockBrowser, { initial });
     // Serve the fake site's logo files from the fixture assets.
     await page.route("https://acme.example/**", (route) => {
@@ -51,9 +52,14 @@ async function renderScreenshots(browser) {
       return route.fulfill({ path: `${ROOT}tests/fixtures/pages/assets/${file}`, contentType: "image/svg+xml" });
     });
     await page.goto("/scripts/screenshot-stage.html");
+    // Wait for both panes: a site frame that has not loaded renders blank.
+    await page.frameLocator("#site").locator("h1").waitFor();
     const sidebar = page.frameLocator("#sidebar");
     await sidebar.locator("#view-review").waitFor();
-    if (shot.scroll) await sidebar.locator(shot.scroll).evaluate((el) => el.scrollIntoView({ block: "start" }));
+    // Scroll only the sidebar document. scrollIntoView can also scroll the stage page.
+    if (shot.scroll) {
+      await sidebar.locator(shot.scroll).evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
+    }
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${ROOT}amo/screenshots/${shot.file}` });
     await page.close();
