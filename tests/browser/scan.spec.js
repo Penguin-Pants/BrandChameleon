@@ -186,7 +186,7 @@ test("FR-11 links with the parent background are links, filled links are buttons
   const anchors = scan.records.filter((r) => r.tag === "a");
   // The last link sits under a visibility:hidden parent that paints no background,
   // so its fill differs from the white page and it is a button.
-  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button", "button", "card", "link", "link"]);
+  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button", "button", "card", "link", "button", "link"]);
   // The browser default link color is exactly the value the analysis ignores (FR-21).
   const defaultBlue = anchors[3];
   expect([defaultBlue.color, defaultBlue.border[2]]).toEqual(["rgb(0, 0, 238)", "rgb(0, 0, 238)"]);
@@ -199,6 +199,13 @@ test("FR-11 links with the parent background are links, filled links are buttons
   const icon = scan.records.find((r) => r.kind === "svg");
   expect(icon).toMatchObject({ inLink: true, fill: "rgb(0, 0, 238)" });
   expect(model.candidates.map((c) => c.hex)).not.toContain("#0000EE");
+  // A covering ::before layer is the fill of a transparent control, with its corners.
+  // A small decorative layer is not (FR-12).
+  const buttons = scan.records.filter((r) => r.tag === "button");
+  expect(buttons.find((r) => r.bg === "rgb(0, 108, 228)")).toMatchObject({ kind: "button", radius: "4px", height: 52 });
+  expect(buttons.find((r) => r.border?.[2] === "rgb(26, 31, 54)").bg).toBeNull();
+  expect(anchors.find((r) => r.bg === "rgb(10, 138, 58)")?.kind).toBe("button");
+  expect(model.candidates.find((c) => c.hex === "#006CE4")?.uses.buttonBg).toBe(1);
   // A transparent border is not a visible border: that link merges into the link record.
   expect(anchors[0].count).toBe(2);
   // An elliptical corner is neither a radius value nor "full".

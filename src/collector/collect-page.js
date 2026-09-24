@@ -54,6 +54,26 @@ export async function collectPage(options) {
     const n = parseFloat(value);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
   };
+  // FR-12: some design systems paint a control's fill with a ::before or ::after
+  // layer over a transparent element (booking.com's Search button does). A
+  // visible layer that covers most of the element counts as its fill.
+  const fillLayer = (el, rect) => {
+    for (const pseudo of ["::before", "::after"]) {
+      const ps = getComputedStyle(el, pseudo);
+      if (ps.content === "none" || ps.content === "normal" || ps.display === "none") continue;
+      if (parseFloat(ps.opacity) === 0 || isTransparent(ps.backgroundColor)) continue;
+      // Sizes are px when the layer renders; % and "auto" are handled too.
+      const size = (value, full) => (value.endsWith("%") ? (parseFloat(value) / 100) * full : parseFloat(value));
+      const width = size(ps.width, rect.width);
+      const height = size(ps.height, rect.height);
+      const covers =
+        Number.isFinite(width) && Number.isFinite(height)
+          ? width >= rect.width * 0.8 && height >= rect.height * 0.8
+          : ["top", "right", "bottom", "left"].every((side) => parseFloat(ps[side]) <= 0);
+      if (covers) return { color: ps.backgroundColor, style: ps };
+    }
+    return null;
+  };
   // Only pixel lengths: "5%" or "normal" gaps are not spacing values.
   const pxOnly = (value) => (/^-?[\d.]+px$/.test(value) ? px(value) : null);
   const directTextLength = (el) => {
@@ -131,9 +151,6 @@ export async function collectPage(options) {
       const cs = getComputedStyle(el);
       if (cs.display === "none" || parseFloat(cs.opacity) === 0) continue;
 
-      const bgRaw = cs.backgroundColor;
-      const bg = isTransparent(bgRaw) ? null : bgRaw;
-      const effectiveBg = bg ?? parentBg;
       const role = el.getAttribute("role");
       const isNav = tag === "nav" || tag === "header" || role === "navigation" || role === "banner";
       const href = tag === "a" && el.hasAttribute("href") ? el.href : null;
@@ -147,15 +164,29 @@ export async function collectPage(options) {
         }
       }
       // inLink: content of a link inherits its color, including the browser default (FR-21).
-      const childContext = { parentBg: effectiveBg, inNav: inNav || isNav, inHomeLink: isHomeLink, inLink: inLink || Boolean(href) };
+      const context = { inNav: inNav || isNav, inHomeLink: isHomeLink, inLink: inLink || Boolean(href) };
 
       const rect = el.getBoundingClientRect();
       const hidden = cs.visibility === "hidden" || cs.visibility === "collapse" || rect.width === 0 || rect.height === 0;
       if (hidden) {
         // A hidden element paints no background, so children keep the one below it.
-        pushChildren(el, { ...childContext, parentBg });
+        pushChildren(el, { ...context, parentBg });
         continue;
       }
+
+      const type = tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : "";
+      const tokens = classTokens(el);
+      const buttonLike =
+        tag === "button" ||
+        (tag === "input" && ["button", "submit", "reset"].includes(type)) ||
+        role === "button" ||
+        tokens.includes("btn") ||
+        tokens.includes("button");
+      const clickable = buttonLike || Boolean(href);
+      const ownBg = isTransparent(cs.backgroundColor) ? null : cs.backgroundColor;
+      const layer = !ownBg && clickable ? fillLayer(el, rect) : null;
+      const bg = ownBg ?? layer?.color ?? null;
+      const childContext = { ...context, parentBg: bg ?? parentBg };
 
       const isSvg = el.namespaceURI === SVG_NS;
       if (isSvg && tag !== "svg") {
@@ -179,21 +210,12 @@ export async function collectPage(options) {
       const border = borderVisible ? [px(cs.borderTopWidth), cs.borderTopStyle, cs.borderTopColor] : null;
       const isRoot = el === document.body || el === document.documentElement;
       const shadow = cs.boxShadow && cs.boxShadow !== "none" ? cs.boxShadow : null;
-      const type = tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : "";
-      const tokens = classTokens(el);
 
       // FR-11: a filled or bordered link is a button up to 64px tall. A taller
       // one is a clickable tile, so it can only be a card.
       const styledLink = Boolean(href) && (borderVisible || (Boolean(bg) && bg !== parentBg));
       let kind = "other";
-      if (
-        tag === "button" ||
-        (tag === "input" && ["button", "submit", "reset"].includes(type)) ||
-        role === "button" ||
-        tokens.includes("btn") ||
-        tokens.includes("button") ||
-        (styledLink && rect.height <= 64)
-      ) {
+      if (buttonLike || (styledLink && rect.height <= 64)) {
         kind = "button";
       } else if (styledLink && !isRoot && area >= 2500) {
         kind = "card";
@@ -219,7 +241,9 @@ export async function collectPage(options) {
       let radiusFull = false;
       if (usesRadius) {
         // An elliptical corner ("20px 1px") has no single radius: ignore it.
-        const [horizontal, vertical = horizontal] = cs.borderTopLeftRadius.split(" ");
+        // A fill layer carries the visible corners when the element has none.
+        const shape = layer && parseFloat(cs.borderTopLeftRadius) === 0 ? layer.style : cs;
+        const [horizontal, vertical = horizontal] = shape.borderTopLeftRadius.split(" ");
         radius = horizontal === vertical ? horizontal : "0px";
         const value = parseFloat(radius);
         const minSide = Math.min(rect.width, rect.height);

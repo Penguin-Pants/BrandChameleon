@@ -5,6 +5,13 @@
   header { background: #0a2540; padding: 16px; }
   header a { background: #0a2540; color: #ffffff; padding: 8px; }
   .pill { background: #635bff; color: #ffffff; padding: 8px; }
+  /* Fill layers, like booking.com's Search button: the element is transparent. */
+  .layer { position: relative; z-index: 0; background: transparent; color: #ffffff; border: 0; height: 52px; padding: 0 16px; }
+  .layer::before { content: ""; position: absolute; inset: 0; z-index: -1; background: #006ce4; border-radius: 4px; }
+  .dot { position: relative; background: transparent; color: #1a1f36; border: 1px solid #1a1f36; }
+  .dot::after { content: ""; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; background: #d4111e; }
+  .layer-link { position: relative; z-index: 0; display: inline-block; color: #ffffff; padding: 8px; }
+  .layer-link::before { content: ""; position: absolute; inset: 0; z-index: -1; background: #0a8a3a; }
 </style></head>
 <body>
   <header><a href="/a">Same background link</a> <a class="pill" href="/b">Filled link</a> <a href="/c" style="border: 1px solid transparent">Transparent border link</a></header>
@@ -14,5 +21,8 @@
   <a href="/e" style="border: 1px solid">Bordered link in the default blue</a>
   <a href="/tile" style="display: block; width: 300px; height: 110px; background: #003b95; color: #fff; padding: 16px; border-radius: 8px">Tall tile link</a>
   <a href="/f"><div>Link content that inherits the default blue</div></a>
+  <button class="layer">Search</button>
+  <button class="dot">Small dot is decoration</button>
+  <a class="layer-link" href="/h">Link with a fill layer</a>
   <nav><a href="/g" aria-label="Icon link"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M0 0h16v16H0z" fill="currentColor"/></svg></a></nav>
 </body></html>
