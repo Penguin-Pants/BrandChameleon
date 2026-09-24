@@ -9,6 +9,7 @@ import {
   MAX_CANDIDATES,
   NEUTRAL_CHROMA,
   NEUTRAL_MIN_DISTANCE,
+  SYSTEM_FONT_ALIASES,
   USE_WEIGHTS,
 } from "./constants.js";
 import { detectName } from "./naming.js";
@@ -98,14 +99,15 @@ function collectColorUses(records) {
       const use = record.kind === "button" ? "buttonBg" : record.kind === "nav" ? "navBg" : record.largeBg ? "largeBg" : "other";
       info.bg = addUse(record.bg, use, record);
     }
-    if (record.border) {
+    // FR-21: a link that keeps the browser's default blue (also as a button or
+    // tile, and in a currentColor border) shows no brand choice. The value stays
+    // unset, so the fuzzy cluster lookup cannot map it onto a nearby real color.
+    const isLink = record.tag === "a" || record.kind === "link";
+    const defaultLinkColor = (raw) => isLink && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(raw));
+    if (record.border && !defaultLinkColor(record.border[2])) {
       info.border = addUse(record.border[2], record.kind === "button" ? "buttonBorder" : "other", record);
     }
-    // FR-21: an unstyled link shows the browser's default blue, which is not a
-    // brand choice. Its text stays unset too, so the fuzzy cluster lookup cannot
-    // map it onto a nearby real color (on-surface, the link component).
-    const defaultLink = record.kind === "link" && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(record.color));
-    if (record.color && !defaultLink) {
+    if (record.color && !defaultLinkColor(record.color)) {
       const use = { button: "buttonText", link: "linkText", heading: "headingText" }[record.kind];
       if (use) info.text = addUse(record.color, use, record);
       else if (record.textLen > 0 || record.kind === "input") info.text = addUse(record.color, "other", record);
@@ -337,7 +339,7 @@ function typographyLevel(group, countOf = (r) => r.count) {
   const families = splitFontStack(stack).map(cleanFontFamily).filter(Boolean);
   return {
     styleKey: group.key,
-    family: families[0] ?? "",
+    family: SYSTEM_FONT_ALIASES.has(families[0]?.toLowerCase()) ? "system-ui" : families[0] ?? "",
     stack: families.join(", "),
     fontSize: round(sizePx, 2),
     fontWeight: weightNumber,

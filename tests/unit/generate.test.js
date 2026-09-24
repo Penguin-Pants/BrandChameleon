@@ -247,3 +247,16 @@ test("CR-2 scan notes go to the sidebar", () => {
   ]);
   assert.equal(scanNotes({ notes: { unreadableStylesheets: 4 } })[0].split(".")[0], "4 stylesheets from other sites could not be read");
 });
+
+test("CR-3 corner values that share an element kind are grouped", () => {
+  const model = baseModel();
+  model.rounded.scale = [
+    { name: "sm", px: 4, count: 6, uses: { button: 4, card: 1 } },
+    { name: "md", px: 8, count: 5, uses: { button: 3, card: 2 } },
+  ];
+  model.rounded.full = { count: 4, uses: { button: 2, img: 1 } };
+  const markdown = generate(model, initialEdits(model));
+  assert.ok(markdown.includes("Corners are 4px, 8px or fully rounded on buttons."));
+  model.rounded.full = { count: 4, uses: { img: 4 } };
+  assert.ok(generate(model, initialEdits(model)).includes("Corners are 4px or 8px on buttons and fully rounded on images."));
+});

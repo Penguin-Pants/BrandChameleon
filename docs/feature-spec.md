@@ -179,8 +179,9 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 - **FR-09** The scan skips the subtree of any element whose `id` or class token matches the overlay denylist in one file (`src/shared/overlay-denylist.js`). Matching is exact or prefix match on whole tokens, never substring. The initial list covers OneTrust, Cookiebot, TrustArc, Quantcast Choice, Didomi, Usercentrics, Osano, CookieYes, Termly, iubenda, Intercom, Drift, HubSpot chat, Crisp, tawk.to, LiveChat and Olark, plus the generic tokens `cookie-banner`, `cookie-consent` and `cookie-notice`.
 - **FR-10** The scan processes at most 5,000 visible elements in DOM order and visits at most 50,000 nodes. When it reaches either limit, the sidebar Scan notes say "The page has more elements than the scan limit. Some elements were not read." (FR-42).
 - **FR-11** The scan classifies elements:
-  - Button: `button`, `input[type=button|submit|reset]`, `[role=button]`, an element with class token `btn` or `button` or an `a[href]` with a visible border or a non-transparent background that differs from its parent's effective background (the first non-transparent background of an ancestor).
-  - Link: `a[href]` that is not a button.
+  - Button: `button`, `input[type=button|submit|reset]`, `[role=button]`, an element with class token `btn` or `button` or an `a[href]` at most 64px tall with a visible border or a non-transparent background that differs from its parent's effective background (the first non-transparent background of an ancestor).
+  - Card (tile): such a styled `a[href]` that is taller than 64px, with an area of at least 2,500 px². It is a clickable tile, not a button (CR-3).
+  - Link: `a[href]` that is not a button or a tile.
   - Nav: `nav`, `header`, `[role=navigation]`, `[role=banner]`.
   - Heading: `h1` to `h6`.
   - Input: text-like `input`, `select`, `textarea`.
@@ -216,12 +217,12 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   3. Else the chromatic cluster with the highest total weight among clusters with Nav background or Nav SVG uses is primary (a colored header is brand evidence, CR-2).
   4. Else (monochrome) primary is the cluster with the highest Button background weight, excluding `surface`. Else the cluster with the highest Link text weight. Else the chromatic cluster with the highest total weight. Else primary is empty.
   5. When primary is neutral, the Overview says "The palette is monochrome." (FR-39).
-  Link text in a browser default link color (`#0000EE` or `#551A8B`) does not enter the palette, because unstyled links show it (CR-2). A page whose only color is such link text gets an empty primary, and review asks you to choose one (FR-44).
+  On an `a` element, a text or border color that is a browser default link color does not enter the palette, because unstyled links show it (CR-2, CR-3). The defaults are `#0000EE` (Firefox and Chrome), `#00CADB` (Firefox on dark pages) and `#551A8B` (visited). This covers links styled as buttons or tiles and `currentColor` borders. A page whose only color is such link text gets an empty primary, and review asks you to choose one (FR-44).
 - **FR-22** `on-primary` is the most common text color cluster on buttons whose background cluster is primary. It is absent when no such button exists.
 - **FR-23** `secondary` is the chromatic cluster with the highest total weight that is at least OKLab distance 0.08 from primary and has at least 10% of primary's total weight. `tertiary` uses the same rule and is also at least 0.08 from secondary.
 - **FR-24** `neutral` is the neutral cluster with the highest total weight that is at least OKLab distance 0.05 from `surface` and `on-surface`.
 - **FR-25** `primary`, `secondary`, `tertiary` and `neutral` each use a different cluster. `primary` never uses the `surface` cluster. `secondary`, `tertiary` and `neutral` never use the `surface`, `on-surface` or `primary` cluster. `surface`, `on-surface` and `on-primary` are measured values and can share a cluster with other roles (for example white `surface` and white `on-primary`). The candidate palette holds the 12 clusters with the highest total weight, plus any cluster that fills a role.
-- **FR-26** Typography levels. A style is the tuple of computed `font-family`, `font-size`, `font-weight`, `line-height` and `letter-spacing`. Each level uses the most common style among its source elements, ties by first DOM occurrence. A level with no source elements is not written.
+- **FR-26** Typography levels. A style is the tuple of computed `font-family`, `font-size`, `font-weight`, `line-height` and `letter-spacing`. Each level uses the most common style among its source elements, ties by first DOM occurrence. A level with no source elements is not written. The written family is the first family of the stack, except when that is a browser-only name for the system font (`-apple-system`, `BlinkMacSystemFont` or `system-ui`): then it is the standard keyword `system-ui`, and the prose keeps the full stack (CR-3).
 
   | Level | Source |
   |---|---|
@@ -280,7 +281,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   - `height` is whole px.
   - Only the 8 spec properties are used: `backgroundColor`, `textColor`, `typography`, `rounded`, `padding`, `size`, `height`, `width`. Borders appear only in prose.
 - **FR-39** Markdown body. `# <name>`, then `##` sections in spec order, then `## Brand Assets` last. The body describes the design, not the scan: no tool name, source URL, scan date, usage counts or scan notes (CR-2; FR-42 shows scan notes in the sidebar). Prose comes only from these templates:
-  - **Overview**: a factual look and feel from the written tokens, in this order, each part only when its tokens exist: "<Light|Dark> theme with <name> (<surface>) pages and <name> (<on-surface>) text." (dark when the relative luminance of surface is below 0.2). "The primary color is <name> (<hex>), with <name> (<hex>) [and <name> (<hex>)] as an accent|accents." (secondary and tertiary), or "The palette is monochrome. The primary color is <name> (<hex>)." "Headings use <family> and body text uses <family>." (or "Headings and body text use <family>."). "Corners are <px> on <kind> [, ...] and fully rounded on <kind>." (the most used element kind per `rounded` token).
+  - **Overview**: a factual look and feel from the written tokens, in this order, each part only when its tokens exist: "<Light|Dark> theme with <name> (<surface>) pages and <name> (<on-surface>) text." (dark when the relative luminance of surface is below 0.2). "The primary color is <name> (<hex>), with <name> (<hex>) [and <name> (<hex>)] as an accent|accents." (secondary and tertiary), or "The palette is monochrome. The primary color is <name> (<hex>)." "Headings use <family> and body text uses <family>." (or "Headings and body text use <family>."). "Corners are <px> on <kind> [, ...] and fully rounded on <kind>." (the most used element kind per `rounded` token; values that share a kind are joined, for example "Corners are 4px, 8px or fully rounded on buttons.").
   - **Colors**: one bullet per role: "**<Role> (<hex>):** <role description>. Used for <uses>." The role descriptions are "Main brand color", "Secondary brand color", "Tertiary brand color", "Neutral color", "Page background", "Main text color" and "Text color on primary backgrounds". Uses are the named use types of FR-18 (button backgrounds, button borders, link text, large background areas, navigation backgrounds, navigation icons, heading text, button text), sorted by weight, with no counts. "Used for" is left out when there is no named use, for a value set by hand and for on-primary.
   - **Typography**: one bullet per level: "**<level>:** <family>, <size>, weight <weight>. Used on `<tag>` [and `<tag>`] elements. Full stack: <stack>." It lists up to 3 source tags.
   - **Layout**: "Spacing scale for padding and gaps in buttons, inputs, navigation links, cards and layouts:" then "- **<name>:** <px>" per token.
@@ -427,6 +428,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
 - **AC-42** The file has no tool name, version, scan date, source URL, usage counts or scan notes. The description and Overview follow FR-35 and FR-39. The sidebar shows the FR-42 scan notes and "(not verified)" on the favicon guess (unit and sidebar tests, brand-basic snapshot).
 - **AC-43** A page whose only colored link text is the browser default `#0000EE` and whose header background is `#003B95` gets primary `#003B95`, and `#0000EE` is in no role and not in the palette (FR-21, unit test).
+- **AC-44** Links styled as buttons in the default blue, including a `currentColor` border, add no color (unit test). A 110px filled link is a card, and a bordered link in the default blue reports `rgb(0, 0, 238)` in the browser (`classify` fixture). A system font stack is written as `system-ui` (unit test). Corner values on the same kind are grouped in the Overview (unit test).
 - **AC-41** UI: Download (mouse or keyboard) and "Download anyway" make the storage call of FR-48, then call `sidebarAction.close()` while the click is still handled. The test mock rejects `close()` outside user input, like Firefox. Cancel in the Raw check dialog makes neither call.
 
 ## 12. Testing Requirements
@@ -544,3 +546,13 @@ None.
   - Ignoring the default blue alone made primary the near-black link color. FR-21 step 3 (colored header or navigation) gives the expected `#003B95`.
   - As an "other" use, the default blue then became tertiary. Link text in a default link color now stays out of the palette.
 - **Changed:** FR-10, FR-19, FR-21, FR-32, FR-35, FR-36, FR-39, FR-42, section 9, AC-08, AC-12, AC-34, new AC-42 and AC-43. Custom property names ("Declared as `--brand-primary`") are no longer in the Colors prose. They still help choose primary (FR-21 step 1).
+
+### CR-3: Fixes from the owner's second Booking.com check (2026-09-24)
+
+- **Owner check:** the new file was valid (0 lint errors), and download and close worked. Review of the values found 4 problems. The owner approved all 4 fixes:
+  1. Secondary was `#0000EE`. Links styled as buttons kept the default blue, and the CR-2 rule covered plain links only. Now every `a` element is covered, text and border (FR-21).
+  2. The Overview said "4px on buttons, 8px on buttons and fully rounded on buttons". Values that share a kind are now joined (FR-39).
+  3. `button-primary` was 110px tall: a large filled link (tile) counted as a button. Styled links taller than 64px are now cards (FR-11).
+  4. Body fonts were written as "BlinkMacSystemFont", which works only in Chrome and Safari on macOS. System font stacks are now written as `system-ui` (FR-26).
+- **Implementer addition:** Firefox's default link color on dark pages (`#00CADB`, pref `browser.anchor_color.dark`) is also excluded. Source: `StaticPrefList.yaml` in Firefox `main`, read on 2026-09-24.
+- **Changed:** FR-11, FR-21, FR-26, FR-39 and new AC-44.

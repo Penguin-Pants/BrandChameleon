@@ -181,6 +181,9 @@ export async function collectPage(options) {
       const type = tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : "";
       const tokens = classTokens(el);
 
+      // FR-11: a filled or bordered link is a button up to 64px tall. A taller
+      // one is a clickable tile, so it can only be a card.
+      const styledLink = Boolean(href) && (borderVisible || (Boolean(bg) && bg !== parentBg));
       let kind = "other";
       if (
         tag === "button" ||
@@ -188,9 +191,11 @@ export async function collectPage(options) {
         role === "button" ||
         tokens.includes("btn") ||
         tokens.includes("button") ||
-        (href && (borderVisible || (bg && bg !== parentBg)))
+        (styledLink && rect.height <= 64)
       ) {
         kind = "button";
+      } else if (styledLink && !isRoot && area >= 2500) {
+        kind = "card";
       } else if (href) {
         kind = "link";
       } else if (isNav) {
