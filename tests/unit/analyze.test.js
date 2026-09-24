@@ -323,6 +323,22 @@ test("FR-21 the browser's default link blue is not chosen as primary", () => {
   assert.ok(!model.candidates.some((c) => c.hex === "#0000EE"), "default link blue is not in the palette");
   assert.ok(!["secondary", "tertiary", "neutral"].some((role) => hexOf(role) === "#0000EE"));
 
+  // Default link text does not count toward a nearby real blue (#0000FF is
+  // within the cluster distance of #0000EE).
+  const near = analyze(
+    scan({
+      backgrounds: { body: "rgb(255, 255, 255)" },
+      records: [
+        text("rgb(17, 17, 17)", { textLen: 50 }),
+        button("rgb(0, 0, 255)", "rgb(255, 255, 255)"),
+        link("rgb(0, 0, 238)", { count: 40, textLen: 2000 }),
+      ],
+    }),
+    CONTEXT,
+  );
+  assert.equal(near.candidates.find((c) => c.id === near.roles["on-surface"])?.hex, "#111111");
+  assert.equal(near.components.link, undefined, "no link component from unstyled links");
+
   // A page with only unstyled links has no brand color: you choose primary in review.
   const plain = analyze(scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 238)")] }), CONTEXT);
   assert.equal(plain.roles.primary, null);

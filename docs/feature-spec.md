@@ -177,7 +177,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 - **FR-07** A second toolbar click in the same window during a scan starts a new scan. Only the result of the latest scan is used.
 - **FR-08** Scan scope: the top-level document and open shadow roots. It skips iframes, closed shadow roots and hidden elements. Hidden means `display: none`, `visibility: hidden` or `collapse`, `opacity: 0` or a zero-size bounding box. Elements outside the viewport are included. The scan does not scroll, click or change the page.
 - **FR-09** The scan skips the subtree of any element whose `id` or class token matches the overlay denylist in one file (`src/shared/overlay-denylist.js`). Matching is exact or prefix match on whole tokens, never substring. The initial list covers OneTrust, Cookiebot, TrustArc, Quantcast Choice, Didomi, Usercentrics, Osano, CookieYes, Termly, iubenda, Intercom, Drift, HubSpot chat, Crisp, tawk.to, LiveChat and Olark, plus the generic tokens `cookie-banner`, `cookie-consent` and `cookie-notice`.
-- **FR-10** The scan processes at most 5,000 visible elements in DOM order and visits at most 50,000 nodes. When it reaches either limit, the Overview says "The scan reached its element limit. Some elements were not read."
+- **FR-10** The scan processes at most 5,000 visible elements in DOM order and visits at most 50,000 nodes. When it reaches either limit, the sidebar Scan notes say "The page has more elements than the scan limit. Some elements were not read." (FR-42).
 - **FR-11** The scan classifies elements:
   - Button: `button`, `input[type=button|submit|reset]`, `[role=button]`, an element with class token `btn` or `button` or an `a[href]` with a visible border or a non-transparent background that differs from its parent's effective background (the first non-transparent background of an ancestor).
   - Link: `a[href]` that is not a button.
@@ -208,7 +208,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   | Button text | 2 | no |
   | Other background, text or border | 1 | no |
 
-- **FR-19** `surface` is the computed background of `body`. If that is transparent, it is the background of `html`. If that is transparent, it is the non-transparent background with the largest area among elements at least 90% as wide as the viewport. If none exists, it is `#FFFFFF` and the Overview says "The page sets no background color. Browser default white is assumed."
+- **FR-19** `surface` is the computed background of `body`. If that is transparent, it is the background of `html`. If that is transparent, it is the non-transparent background with the largest area among elements at least 90% as wide as the viewport. If none exists, it is `#FFFFFF` and the sidebar Scan notes say "The page sets no background color. Surface is set to white, the browser default." (FR-42).
 - **FR-20** `on-surface` is the text color cluster with the largest total direct text length.
 - **FR-21** `primary`:
   1. If a chromatic cluster has an interactive weight above 0 and contains the resolved color of a custom property whose name contains `primary` or `brand`, that cluster is primary. If more than one cluster qualifies, the higher interactive weight wins.
@@ -343,7 +343,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 | No color at all | Primary empty. Download disabled until you set it. |
 | No `h1`, `h2` or `h3` | Those levels are not written. |
 | No typography source at all | `typography` in `omitted` with "No typography levels defined". |
-| Cross-origin stylesheets | Skipped, counted and reported in Overview. |
+| Cross-origin stylesheets | Skipped, counted and reported in the sidebar Scan notes (FR-42), not in the file. |
 | Framework variables not used (for example Bootstrap `--bs-primary`) | Ignored for primary, because the name hint needs interactive use. |
 | Cookie banner or chat widget | Skipped by FR-09. |
 | Sidebar opened from the Firefox menu | Empty state. |
@@ -392,11 +392,11 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-05** A rejected `executeScript` shows the restricted-page error text.
 - **AC-06** Fixture `brand-basic`: primary `#635BFF`, secondary `#00D4FF`, surface `#FFFFFF`, on-surface `#1A1F36`, on-primary `#FFFFFF`, neutral `#E3E8EE`.
 - **AC-07** Fixture `framework-leftover` (`--bs-primary: #0D6EFD` unused, buttons `#E4002B`): primary `#E4002B`.
-- **AC-08** Fixture `mono` (black buttons, no saturated color): primary `#000000`. The Overview has the monochrome sentence.
+- **AC-08** Fixture `mono` (black buttons, no saturated color): primary `#000000`. The Overview says "The palette is monochrome." (FR-39).
 - **AC-09** Fixture `overlay`: no color that exists only in the OneTrust banner appears in the candidates.
 - **AC-10** Fixture `hidden`: no color that exists only on hidden elements appears in the candidates.
 - **AC-11** Fixture `shadow`: colors in an open shadow root are counted. Colors only in a closed shadow root are not.
-- **AC-12** Fixture `cross-origin`: the scan completes with no error. The Overview says 1 stylesheet could not be read.
+- **AC-12** Fixture `cross-origin`: the scan completes with no error. The Scan notes (FR-42) say 1 stylesheet could not be read, and the file does not.
 - **AC-13** Fixture `brand-basic` typography equals the expected table in the test (for example `headline-lg`: Inter, 48px, 700, 1.1, -0.02em). Fixture `sparse` has no headline levels.
 - **AC-14** Fixture `brand-basic`: `rounded` is `sm: 4px`, `md: 8px` and `full: 9999px`. `spacing` equals the expected scale in the test.
 - **AC-15** Fixture `brand-basic`: `button-primary` has references to primary, on-primary, `rounded.md` and `label-md`. It has no `padding` key. The Components prose has "12px vertical and 24px horizontal padding". `button-secondary` has no `backgroundColor`.
@@ -543,4 +543,4 @@ None.
 - **Implementer additions:**
   - Ignoring the default blue alone made primary the near-black link color. FR-21 step 3 (colored header or navigation) gives the expected `#003B95`.
   - As an "other" use, the default blue then became tertiary. Link text in a default link color now stays out of the palette.
-- **Changed:** FR-21, FR-32, FR-35, FR-36, FR-39, FR-42, AC-34, new AC-42 and AC-43. Custom property names ("Declared as `--brand-primary`") are no longer in the Colors prose. They still help choose primary (FR-21 step 1).
+- **Changed:** FR-10, FR-19, FR-21, FR-32, FR-35, FR-36, FR-39, FR-42, section 9, AC-08, AC-12, AC-34, new AC-42 and AC-43. Custom property names ("Declared as `--brand-primary`") are no longer in the Colors prose. They still help choose primary (FR-21 step 1).

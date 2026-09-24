@@ -102,11 +102,10 @@ function collectColorUses(records) {
       info.border = addUse(record.border[2], record.kind === "button" ? "buttonBorder" : "other", record);
     }
     // FR-21: an unstyled link shows the browser's default blue, which is not a
-    // brand choice, so it does not enter the palette.
+    // brand choice. Its text stays unset too, so the fuzzy cluster lookup cannot
+    // map it onto a nearby real color (on-surface, the link component).
     const defaultLink = record.kind === "link" && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(record.color));
-    if (record.color && defaultLink) {
-      info.text = normalizeColor(record.color);
-    } else if (record.color) {
+    if (record.color && !defaultLink) {
       const use = { button: "buttonText", link: "linkText", heading: "headingText" }[record.kind];
       if (use) info.text = addUse(record.color, use, record);
       else if (record.textLen > 0 || record.kind === "input") info.text = addUse(record.color, "other", record);
