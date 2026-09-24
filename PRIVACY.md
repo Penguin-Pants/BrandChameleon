@@ -32,6 +32,7 @@ The extension itself makes no network requests. The review sidebar shows small t
 | Permission | Why |
 |---|---|
 | `activeTab` | Read the current tab after you click the toolbar button. |
+| `downloads` | Save the DESIGN.md file to your download folder when you click Download. The extension does not read, change or delete your other downloads. |
 | `scripting` | Run the read-only scan in that tab. |
 | `storage` | Keep your review while the sidebar is closed and reopened. |
 

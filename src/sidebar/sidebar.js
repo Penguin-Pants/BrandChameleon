@@ -502,32 +502,44 @@ function buildReview() {
 
 // Download -------------------------------------------------------------------
 
-async function download() {
+function download() {
   const { review } = state;
-  const button = $("download");
   if (downloadBlockers(review.model, review.edits).length) return;
   const text = $("markdown").value;
   const failures = checkRawMarkdown(text);
-  if (failures.length) {
-    const proceed = await confirmDialog({
-      title: "Check the markdown",
-      message: "The file may not be valid DESIGN.md:",
-      items: failures,
-      confirmLabel: "Download anyway",
-      cancelLabel: "Cancel",
-      opener: button,
-    });
-    if (!proceed) return;
+  if (!failures.length) {
+    saveAndClose(text);
+    return;
   }
+  confirmDialog({
+    title: "Check the markdown",
+    message: "The file may not be valid DESIGN.md:",
+    items: failures,
+    confirmLabel: "Download anyway",
+    cancelLabel: "Cancel",
+    opener: $("download"),
+    onConfirm: () => saveAndClose(text),
+  });
+}
+
+// FR-48: Firefox allows sidebarAction.close() only while it handles the click,
+// so everything here runs synchronously in that click. The downloads API saves
+// the file in the parent process, so closing the sidebar cannot cancel it.
+// saveAs is false because a Save dialog needs the sidebar that is closing.
+function saveAndClose(text) {
+  const { review } = state;
   const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
-  const link = h("a", { href: url, download: fileNameForReview(review.model, review.edits), hidden: true });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  browser.downloads
+    .download({ url, filename: fileNameForReview(review.model, review.edits), conflictAction: "uniquify", saveAs: false })
+    .catch((error) => {
+      console.error("[BrandChameleon]", error);
+      announce("Download failed. Click Download to try again.");
+    });
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
   review.dirty = false;
-  await saveReview();
+  saveReview().catch((error) => console.error("[BrandChameleon]", error));
   announce("Download started");
+  browser.sidebarAction.close().catch((error) => console.error("[BrandChameleon]", error));
 }
 
 // Startup --------------------------------------------------------------------

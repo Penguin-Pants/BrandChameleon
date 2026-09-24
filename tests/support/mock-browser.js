@@ -23,7 +23,37 @@ export function installMockBrowser({
     for (const listener of listeners) listener(JSON.parse(JSON.stringify(changes)), "session");
   };
   const windowId = Number(new URLSearchParams(location.search).get("window") ?? 1);
+  // Firefox lets sidebarAction.close() run only while it handles user input.
+  // A trusted input event marks the rest of its task as user input.
+  let userInput = false;
+  for (const type of ["click", "keydown", "keyup", "mousedown", "mouseup"]) {
+    addEventListener(
+      type,
+      (event) => {
+        if (!event.isTrusted) return;
+        userInput = true;
+        setTimeout(() => (userInput = false));
+      },
+      true,
+    );
+  }
+  const calls = [];
+  const downloads = [];
   window.browser = {
+    downloads: {
+      download: async (options) => {
+        calls.push("downloads.download");
+        const text = await (await fetch(options.url)).text();
+        downloads.push({ ...options, text });
+        return downloads.length;
+      },
+    },
+    sidebarAction: {
+      close: async () => {
+        calls.push(userInput ? "sidebarAction.close" : "sidebarAction.close (no user input)");
+        if (!userInput) throw new Error("sidebarAction.close may only be called from a user input handler");
+      },
+    },
     windows: { getCurrent: async () => ({ id: windowId }) },
     runtime: { getManifest: () => ({ version }) },
     storage: {
@@ -38,10 +68,13 @@ export function installMockBrowser({
           const list = Array.isArray(keys) ? keys : [keys];
           return Object.fromEntries(list.filter((k) => k in data).map((k) => [k, data[k]]));
         },
-        set: async (items) => write(JSON.parse(JSON.stringify(items))),
+        set: async (items) => {
+          calls.push("storage.session.set");
+          write(JSON.parse(JSON.stringify(items)));
+        },
       },
       onChanged: { addListener: (listener) => listeners.push(listener) },
     },
   };
-  window.__mock = { set: write, get: read };
+  window.__mock = { set: write, get: read, calls, downloads };
 }

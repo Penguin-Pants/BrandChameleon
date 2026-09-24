@@ -14,6 +14,7 @@ Run this checklist in real Firefox before each AMO submission. Automated tests r
 
 - [ ] Install the signed `.xpi` from AMO or a self-distribution build.
 - [ ] The prompt shows no "Access your data for all websites" warning.
+- [ ] The prompt lists "Download files and read and modify the browser’s download history" (the `downloads` permission).
 - [ ] The prompt says the extension does not collect data.
 
 ## Scan and review
@@ -26,12 +27,17 @@ Run this checklist in real Firefox before each AMO submission. Automated tests r
 - [ ] Type an invalid hex such as `#12`. The error text appears and the markdown does not change.
 - [ ] Uncheck **Include shapes**. The markdown loses `rounded:` and gains an `omitted` entry.
 
-## Download (risk R1)
+## Download and close (risk R1)
 
-- [ ] Click **Download**. Firefox saves `<slug>_design.md` to the default download folder.
-- [ ] Open the file. It matches the text in the sidebar.
-- [ ] Download again. Firefox saves `<slug>_design(1).md` (auto-rename).
-- [ ] If the download does not start at all, stop and report it: the fix needs the `downloads` permission, which is a product decision.
+- [ ] Before you click, copy the text from the **Markdown** box.
+- [ ] Click **Download**. The sidebar closes. Firefox opens its Downloads panel and saves `<slug>_design.md` to the default download folder.
+- [ ] Open the file. It is complete and matches the text you copied.
+- [ ] Scan the same site again and click **Download**. Firefox saves `<slug>_design(1).md` (auto-rename) and keeps the first file.
+- [ ] Scan again, focus **Download** with the Tab key and press Enter. The file saves and the sidebar closes.
+- [ ] Scan again and delete the first `---` line in the Markdown box. Click **Download**. The "Check the markdown" dialog opens. Click **Cancel**: the sidebar stays open and no file saves.
+- [ ] Click **Download** again, then **Download anyway**. The file saves and the sidebar closes.
+- [ ] In Firefox Settings, turn on "Ask where to save files before downloading" (older versions: "Always ask you where to save files"). Scan and click **Download**. The file saves to the default download folder with no Save dialog, and the sidebar closes. Turn the setting off again.
+- [ ] If a file does not save or is empty, stop and report it. Also report if the sidebar stays open after the file saves.
 
 ## Validate the file
 

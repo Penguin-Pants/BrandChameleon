@@ -19,7 +19,7 @@ BrandChameleon turns the look of a website into a DESIGN.md file. DESIGN.md is a
 1. Open a website and click the BrandChameleon toolbar button.
 2. The sidebar shows the proposed name, colors, typography, shapes, spacing, components and logo.
 3. Correct any value. Remove groups you do not want. Edit the final text if you like.
-4. Click Download to save `company-name_design.md`.
+4. Click Download. Firefox saves `company-name_design.md` and the sidebar closes.
 
 **What you get**
 
@@ -34,6 +34,7 @@ BrandChameleon turns the look of a website into a DESIGN.md file. DESIGN.md is a
 
 - No data collection. No network requests of its own.
 - Reads only the tab you click, only when you click.
+- Uses the downloads permission only to save the file you create. It does not read your download history.
 - Skips common cookie banners and chat widgets.
 
 **Limits**
@@ -76,7 +77,7 @@ Upload in this order (1280 x 800):
 - Compatibility: select **Firefox** (desktop) only. Do not select Firefox for Android: the extension uses the sidebar, which Android does not have.
 - Source code: not required. The package contains plain, unminified JavaScript. No build step changes the files.
 - Expected lint warning: `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION`. The extension is desktop only and keeps Firefox ESR 140 support.
-- Notes to reviewer: "Click the toolbar button on any website. The sidebar opens and shows the scan. The Download button saves a Markdown file. The extension has no network code; logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page."
+- Notes to reviewer: "Click the toolbar button on any website. The sidebar opens and shows the scan. The Download button saves a Markdown file with downloads.download() and closes the sidebar. The downloads permission is used only for this file; the extension does not read or change other downloads. The extension has no network code; logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page."
 
 ## Upload
 
