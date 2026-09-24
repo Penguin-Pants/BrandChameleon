@@ -204,7 +204,12 @@ test("FR-11 links with the parent background are links, filled links are buttons
   const buttons = scan.records.filter((r) => r.tag === "button");
   expect(buttons.find((r) => r.bg === "rgb(0, 108, 228)")).toMatchObject({ kind: "button", radius: "4px", height: 52 });
   expect(buttons.find((r) => r.border?.[2] === "rgb(26, 31, 54)").bg).toBeNull();
+  // A layer scaled to 96% still covers the link.
   expect(anchors.find((r) => r.bg === "rgb(10, 138, 58)")?.kind).toBe("button");
+  // Layers that paint little or nothing over the element are not fills: scaled to 0,
+  // moved or placed off it, clipped, rotated, or placed by an ancestor (FR-12).
+  const ghosts = buttons.filter((r) => r.bg === null && r.color === "rgb(255, 255, 255)");
+  expect(ghosts.reduce((sum, r) => sum + r.count, 0)).toBe(7);
   expect(model.candidates.find((c) => c.hex === "#006CE4")?.uses.buttonBg).toBe(1);
   // A transparent border is not a visible border: that link merges into the link record.
   expect(anchors[0].count).toBe(2);
