@@ -54,6 +54,58 @@ export async function collectPage(options) {
     const n = parseFloat(value);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
   };
+  // FR-12: some design systems paint a control's fill with a ::before or ::after
+  // layer over a transparent element (booking.com's Search button does). A
+  // visible layer whose painted box covers most of the element counts as its fill.
+  const fillLayer = (el, cs, rect) => {
+    for (const pseudo of ["::before", "::after"]) {
+      const ps = getComputedStyle(el, pseudo);
+      if (ps.content === "none" || ps.content === "normal" || ps.display === "none") continue;
+      if (parseFloat(ps.opacity) === 0 || isTransparent(ps.backgroundColor)) continue;
+      if (layerCovers(ps, cs, rect)) return { color: ps.backgroundColor, style: ps };
+    }
+    return null;
+  };
+  // The painted box of an absolute layer, in the element's border-box coordinates,
+  // after its transform, translate and scale. A layer whose painted box is not
+  // known is not a fill: placed by an ancestor, rotated, skewed, clipped or hidden.
+  const layerCovers = (ps, cs, rect) => {
+    if (ps.position !== "absolute" || (cs.position === "static" && cs.transform === "none")) return false;
+    if (ps.visibility !== "visible" || ps.clipPath !== "none" || (ps.rotate ?? "none") !== "none") return false;
+    const length = (value, full) => (value.endsWith("%") ? (parseFloat(value) / 100) * full : parseFloat(value));
+    const matrix = /^matrix(3d)?\(([^)]+)\)$/.exec(ps.transform);
+    if (ps.transform !== "none" && !matrix) return false;
+    const m = matrix ? matrix[2].split(",").map(Number) : [1, 0, 0, 1, 0, 0];
+    const [a, b, c, d, e, f] = matrix?.[1] ? [m[0], m[1], m[4], m[5], m[12], m[13]] : m;
+    if (Math.abs(b) > 1e-6 || Math.abs(c) > 1e-6) return false;
+    const [scaleX = 1, scaleY = scaleX] = (ps.scale ?? "none") === "none" ? [] : ps.scale.split(" ").map((v) => length(v, 1));
+    const [translateX = "0px", translateY = "0px"] = (ps.translate ?? "none") === "none" ? [] : ps.translate.split(" ");
+    const [originX, originY] = ps.transformOrigin.split(" ").map(parseFloat);
+    // One axis: offsets start at the padding box; a content-box layer adds its padding
+    // and border. A point p paints at origin + translate + scale * (matrix * (p - origin) + shift).
+    const axis = ([start, end, size, before, after], full, matrixScale, shift, scale, origin, translate) => {
+      const border = [before, after].map((side) => parseFloat(cs[`border${side}Width`]) || 0);
+      const inner = full - border[0] - border[1];
+      let from = length(ps[start], inner);
+      const to = length(ps[end], inner);
+      let span = length(ps[size], inner);
+      if (!Number.isFinite(span)) span = inner - (Number.isFinite(from) ? from : 0) - (Number.isFinite(to) ? to : 0);
+      if (!Number.isFinite(from)) from = Number.isFinite(to) ? inner - to - span : 0;
+      if (ps.boxSizing !== "border-box") {
+        for (const side of [before, after]) {
+          span += (parseFloat(ps[`padding${side}`]) || 0) + (parseFloat(ps[`border${side}Width`]) || 0);
+        }
+      }
+      const offset = length(translate, span);
+      const ends = [0, span].map((p) => border[0] + from + origin + offset + scale * (matrixScale * (p - origin) + shift));
+      const painted = Math.min(Math.max(...ends), full) - Math.max(Math.min(...ends), 0);
+      return Number.isFinite(painted) && painted >= full * 0.8;
+    };
+    return (
+      axis(["left", "right", "width", "Left", "Right"], rect.width, a, e, scaleX, originX, translateX) &&
+      axis(["top", "bottom", "height", "Top", "Bottom"], rect.height, d, f, scaleY, originY, translateY)
+    );
+  };
   // Only pixel lengths: "5%" or "normal" gaps are not spacing values.
   const pxOnly = (value) => (/^-?[\d.]+px$/.test(value) ? px(value) : null);
   const directTextLength = (el) => {
@@ -131,9 +183,6 @@ export async function collectPage(options) {
       const cs = getComputedStyle(el);
       if (cs.display === "none" || parseFloat(cs.opacity) === 0) continue;
 
-      const bgRaw = cs.backgroundColor;
-      const bg = isTransparent(bgRaw) ? null : bgRaw;
-      const effectiveBg = bg ?? parentBg;
       const role = el.getAttribute("role");
       const isNav = tag === "nav" || tag === "header" || role === "navigation" || role === "banner";
       const href = tag === "a" && el.hasAttribute("href") ? el.href : null;
@@ -147,15 +196,29 @@ export async function collectPage(options) {
         }
       }
       // inLink: content of a link inherits its color, including the browser default (FR-21).
-      const childContext = { parentBg: effectiveBg, inNav: inNav || isNav, inHomeLink: isHomeLink, inLink: inLink || Boolean(href) };
+      const context = { inNav: inNav || isNav, inHomeLink: isHomeLink, inLink: inLink || Boolean(href) };
 
       const rect = el.getBoundingClientRect();
       const hidden = cs.visibility === "hidden" || cs.visibility === "collapse" || rect.width === 0 || rect.height === 0;
       if (hidden) {
         // A hidden element paints no background, so children keep the one below it.
-        pushChildren(el, { ...childContext, parentBg });
+        pushChildren(el, { ...context, parentBg });
         continue;
       }
+
+      const type = tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : "";
+      const tokens = classTokens(el);
+      const buttonLike =
+        tag === "button" ||
+        (tag === "input" && ["button", "submit", "reset"].includes(type)) ||
+        role === "button" ||
+        tokens.includes("btn") ||
+        tokens.includes("button");
+      const clickable = buttonLike || Boolean(href);
+      const ownBg = isTransparent(cs.backgroundColor) ? null : cs.backgroundColor;
+      const layer = !ownBg && clickable ? fillLayer(el, cs, rect) : null;
+      const bg = ownBg ?? layer?.color ?? null;
+      const childContext = { ...context, parentBg: bg ?? parentBg };
 
       const isSvg = el.namespaceURI === SVG_NS;
       if (isSvg && tag !== "svg") {
@@ -179,21 +242,12 @@ export async function collectPage(options) {
       const border = borderVisible ? [px(cs.borderTopWidth), cs.borderTopStyle, cs.borderTopColor] : null;
       const isRoot = el === document.body || el === document.documentElement;
       const shadow = cs.boxShadow && cs.boxShadow !== "none" ? cs.boxShadow : null;
-      const type = tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : "";
-      const tokens = classTokens(el);
 
       // FR-11: a filled or bordered link is a button up to 64px tall. A taller
       // one is a clickable tile, so it can only be a card.
       const styledLink = Boolean(href) && (borderVisible || (Boolean(bg) && bg !== parentBg));
       let kind = "other";
-      if (
-        tag === "button" ||
-        (tag === "input" && ["button", "submit", "reset"].includes(type)) ||
-        role === "button" ||
-        tokens.includes("btn") ||
-        tokens.includes("button") ||
-        (styledLink && rect.height <= 64)
-      ) {
+      if (buttonLike || (styledLink && rect.height <= 64)) {
         kind = "button";
       } else if (styledLink && !isRoot && area >= 2500) {
         kind = "card";
@@ -219,7 +273,9 @@ export async function collectPage(options) {
       let radiusFull = false;
       if (usesRadius) {
         // An elliptical corner ("20px 1px") has no single radius: ignore it.
-        const [horizontal, vertical = horizontal] = cs.borderTopLeftRadius.split(" ");
+        // A fill layer carries the visible corners when the element has none.
+        const shape = layer && parseFloat(cs.borderTopLeftRadius) === 0 ? layer.style : cs;
+        const [horizontal, vertical = horizontal] = shape.borderTopLeftRadius.split(" ");
         radius = horizontal === vertical ? horizontal : "0px";
         const value = parseFloat(radius);
         const minSide = Math.min(rect.width, rect.height);
