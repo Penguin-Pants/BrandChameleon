@@ -86,8 +86,10 @@ test("AC-37 icons, screenshots, listing summary, privacy policy and license", as
   assert.doesNotMatch(amoPolicy, /^(#|\|)/m);
   for (const policy of [await readFile(join(ROOT, "PRIVACY.md"), "utf8"), amoPolicy]) {
     assert.match(policy, /collects no data/);
-    // Logo thumbnails load page-declared image URLs, which can be on other servers.
+    // Logo thumbnails load page-declared image URLs, which can be on other servers,
+    // and the guessed /favicon.ico of the scanned site.
     assert.match(policy, /IP address/);
+    assert.match(policy, /\/favicon\.ico/);
     assert.doesNotMatch(policy, /any third party/);
   }
   assert.match(await readFile(join(ROOT, "LICENSE"), "utf8"), /^MIT License/);

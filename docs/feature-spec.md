@@ -319,7 +319,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 
 ### 8.6 Non-functional
 
-- **FR-52** Privacy: the extension sends no network requests of its own. The only requests are logo thumbnails that the sidebar loads from URLs found on the scanned page. No telemetry or analytics.
+- **FR-52** Privacy: the extension sends no network requests of its own. The only requests are logo thumbnails that the sidebar loads from URLs found on the scanned page, plus the guessed `<origin>/favicon.ico` (FR-32 step 4). The privacy policies disclose both (CR-6). No telemetry or analytics.
 - **FR-53** Performance: scan plus analysis finishes in under 3 s for the 5,000-element fixture in the Chromium test environment. Stored review state is under 1 MB for that fixture.
 - **FR-54** Logging: errors go to the console with the prefix `[BrandChameleon]`. No other logging.
 
@@ -587,6 +587,6 @@ None.
   - Screenshots are rendered at 2400 x 1800.
   - `amo/listing.md` is an answer sheet in AMO form order: Web Development only, no tags, a short summary for the 70-character rule and reviewer test steps.
   - New `amo/privacy-policy.md` with the same content as `PRIVACY.md` in the AMO Markdown subset.
-  - Both policies no longer say that no data goes to any third party. Logo thumbnails load image URLs that the page declares, which can be on other servers. Each request gives that server the IP address and request headers, and it can include cookies (Codex review).
+  - Both policies no longer say that no data goes to any third party. Logo thumbnails load image URLs that the page declares, which can be on other servers, and the guessed `/favicon.ico` on the scanned site. Each request gives that server the IP address and request headers, and it can include cookies (Codex review).
   - The screenshot script waits for the site frame and scrolls only the sidebar document.
 - **Changed:** FR-01, FR-57, AC-37, `PRIVACY.md`, `README.md`, `amo/listing.md`, new `amo/privacy-policy.md` and the AMO screenshots.

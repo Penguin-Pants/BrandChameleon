@@ -94,7 +94,7 @@ BrandChameleon turns the look of a website into a DESIGN.md file. DESIGN.md is a
 
 **Privacy**
 
-- No data collection. The only network requests are logo thumbnails, loaded from image URLs on the scanned page.
+- No data collection. The only network requests are logo thumbnails, loaded from image URLs on the scanned page and from `/favicon.ico` on the scanned site.
 - Reads only the tab you click, only when you click.
 - Uses the downloads permission only to save the file you create. It does not read your download history.
 - Skips common cookie banners and chat widgets.
@@ -154,7 +154,7 @@ How to test:
 
 How it works: the toolbar click uses activeTab and scripting to run a read-only scan in that tab. The Download button hands the Markdown text to the background script through storage.session and closes the sidebar. The background script saves it with downloads.download(). The downloads permission is used only for this file. The extension does not read or change other downloads.
 
-The extension has no network code. Logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page.
+The extension has no network code. Logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page, plus <origin>/favicon.ico of the scanned site (a guess, labeled "not verified").
 
 There is no build step. The zip contains the files in src/ of https://github.com/Penguin-Pants/BrandChameleon without changes.
 ```

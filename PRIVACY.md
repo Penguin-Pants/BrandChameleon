@@ -25,7 +25,7 @@ It reads only the tab where you clicked the button, and only at that moment (`ac
 
 ## Network requests
 
-The extension's code sends no data over the network. The review sidebar shows small thumbnails of logo candidates. To show them, Firefox loads each image from the URL that the scanned page declares, for example its icon or `og:image`. That URL can point to the site's own server or to another server, such as an image host. Like any web image, each request gives that server your IP address and the normal browser request headers, and it can include cookies that Firefox holds for that server. The extension adds no data to these requests and sends no referrer.
+The extension's code sends no data over the network. The review sidebar shows small thumbnails of logo candidates. To show them, Firefox loads each image from the URL that the scanned page declares, for example its icon or `og:image`. It also tries `/favicon.ico` on the scanned site's own server, even when the page does not declare it. That URL can point to the site's own server or to another server, such as an image host. Like any web image, each request gives that server your IP address and the normal browser request headers, and it can include cookies that Firefox holds for that server. The extension adds no data to these requests and sends no referrer.
 
 ## Permissions
 
