@@ -448,7 +448,7 @@ function body(model, edits, ctx, components) {
     rules.push(`- Do set headlines in ${headline.family} and body text in ${bodyLevel.family}.`);
   }
   const radius = buttonPrimary?.entries.find(([prop]) => prop === "rounded")?.[1];
-  if (radius?.ref) rules.push(`- Do use ${radius.token} (${px(radius.value)}) corners on buttons.`);
+  if (radius?.ref) rules.push(`- Do use ${radius.token} (${px(radius.value)}) corners on primary buttons.`);
   section("Do's and Don'ts", rules);
 
   // Brand Assets
