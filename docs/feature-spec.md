@@ -1,4 +1,4 @@
-# Feature Specification: BrandChameleon v0.1.0
+# Feature Specification: BrandChameleon v1.0
 
 Status: Draft for scope confirmation
 Target format: [DESIGN.md spec, version `alpha`](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md)
@@ -165,7 +165,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 
 ### 8.1 Manifest and packaging
 
-- **FR-01** `manifest.json` uses `manifest_version: 3`. It sets `name` to "BrandChameleon: DESIGN.md Generator", `version` to "0.1.0", `browser_specific_settings.gecko.id` to "brandchameleon@penguin-pants", `strict_min_version` to "140.0" and `data_collection_permissions.required` to `["none"]`. It has no `gecko_android` key. `sidebar_action.open_at_install` is `false`.
+- **FR-01** `manifest.json` uses `manifest_version: 3`. It sets `name` to "BrandChameleon: DESIGN.md Generator", `version` to "1.0", `browser_specific_settings.gecko.id` to "brandchameleon@penguin-pants", `strict_min_version` to "140.0" and `data_collection_permissions.required` to `["none"]`. It has no `gecko_android` key. `sidebar_action.open_at_install` is `false`.
 - **FR-02** `permissions` is exactly `["activeTab", "downloads", "scripting", "storage"]`. The manifest has no `host_permissions`, no `optional_permissions` and no `content_scripts`. The `downloads` permission is used only for `downloads.download()` in FR-48 (change request CR-1).
 - **FR-03** The package contains no remote code, no `eval`, no `new Function` and no minified or bundled code. No build step changes source files.
 
@@ -327,7 +327,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 
 - **FR-55** npm scripts: `test` (all automated tests), `lint` (`web-ext lint` gate per AC-01 plus `eslint`), `build` (`web-ext build` to a zip of `src/` only), `assets` (renders PNG icons and screenshots).
 - **FR-56** Icons: an original SVG (chameleon and swatch motif) plus PNG at 48, 96 and 128 px.
-- **FR-57** AMO listing folder `amo/` with: summary (250 characters or fewer), description, 3 screenshots at 1280 x 800 rendered from the sidebar UI with fixture data and submission notes (desktop only, MIT license, no data collection).
+- **FR-57** AMO listing folder `amo/` with: summary (250 characters or fewer), description, 3 screenshots at 2400 x 1800 (4:3, the AMO full size) rendered from the sidebar UI with fixture data, submission notes (desktop only, MIT license, no data collection) and a privacy policy in the Markdown subset that AMO allows (no headings, no tables). `amo/listing.md` is an answer sheet with every AMO form value in form order (CR-6).
 - **FR-58** `PRIVACY.md`, `LICENSE` (MIT) and an updated `README.md`.
 - **FR-59** `docs/manual-firefox-checklist.md` for the owner to run in Firefox before AMO submission.
 - **FR-60** A GitHub Actions workflow runs `npm ci`, `npm run lint` and `npm test` on pull requests.
@@ -422,7 +422,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-34** A title of `Evil"\nname: x` gives YAML that parses with exactly one `name` key. Font families with markdown or control characters are sanitized. The file does not contain the scanned URL, its query or its fragment.
 - **AC-35** Same input and fixed clock give byte-identical output.
 - **AC-36** `npm run build` makes a zip in `web-ext-artifacts/`. It contains `manifest.json` and no `tests/` or `node_modules/`.
-- **AC-37** PNG icons are exactly 48, 96 and 128 px. Screenshots are exactly 1280 x 800. The summary is 250 characters or fewer. `PRIVACY.md` and an MIT `LICENSE` exist.
+- **AC-37** PNG icons are exactly 48, 96 and 128 px. Screenshots are exactly 2400 x 1800. The summary is 250 characters or fewer, and the name with the short summary is 70 characters or fewer. `PRIVACY.md` and an MIT `LICENSE` exist. `amo/privacy-policy.md` has no headings and no tables (CR-6).
 - **AC-38** `README.md` covers install, use, development, tests, build and AMO submission. The manual checklist exists.
 - **AC-39** The CI workflow runs lint and tests on pull requests.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
@@ -471,7 +471,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 | Element picker to exclude parts of the page | |
 | Same-origin iframes and closed shadow roots | |
 | Firefox for Android | |
-| Localization | English only in v0.1.0. |
+| Localization | English only in v1.0. |
 | Keyboard shortcut for scan | |
 | Firefox end-to-end tests | Needs Mozilla hosts on the network allowlist. |
 
@@ -573,3 +573,18 @@ None.
 - **Owner check:** the fifth Booking.com file says "Do use rounded.sm (4px) corners on buttons.", but its `button-secondary` uses `rounded.full`. The rule comes from `button-primary` only, so the two statements disagree.
 - **Fix:** the rule now says "corners on primary buttons", like the rule "for primary button backgrounds".
 - **Changed:** FR-39 (Do's and Don'ts) and the `brand-basic` snapshot.
+
+### CR-6: Version 1.0 and the AMO answer sheet (2026-09-24)
+
+- **Owner request:** the owner finished the manual Firefox checklist with no failures. The release is version 1.0 and needs a complete AMO package.
+- **Checked against the AMO server source** (`mozilla/addons-server`):
+  - The description and privacy policy fields accept Markdown, but only these tags stay: `a`, `abbr`, `acronym`, `b`, `blockquote`, `code`, `em`, `i`, `li`, `ol`, `strong` and `ul`. Headings are removed and tables are not supported.
+  - Tags come from a fixed list. None fit this extension.
+  - An add-on can have up to 3 categories. The AMO text for Appearance describes extensions that change how websites or Firefox look.
+  - Screenshots show at 4:3 (full size 2400 x 1800). With AMO's `content-optimization` switch on, other ratios are rejected, and the name and summary together can have at most 70 characters.
+- **Fix:**
+  - `version` is "1.0" in `manifest.json` and "1.0.0" in `package.json`.
+  - Screenshots are rendered at 2400 x 1800.
+  - `amo/listing.md` is an answer sheet in AMO form order: Web Development only, no tags, a short summary for the 70-character rule and reviewer test steps.
+  - New `amo/privacy-policy.md` with the same content as `PRIVACY.md` in the AMO Markdown subset.
+- **Changed:** FR-01, FR-57, AC-37, `README.md`, `amo/listing.md`, new `amo/privacy-policy.md` and the AMO screenshots.

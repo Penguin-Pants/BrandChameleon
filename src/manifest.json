@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BrandChameleon: DESIGN.md Generator",
-  "version": "0.1.0",
+  "version": "1.0",
   "description": "Scan a website's styles and download a DESIGN.md file with its brand colors, fonts, shapes and logo URL.",
   "homepage_url": "https://github.com/Penguin-Pants/BrandChameleon",
   "icons": {
