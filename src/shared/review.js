@@ -69,3 +69,18 @@ export function downloadBlockers(model, edits) {
 export function fileNameForReview(model, edits) {
   return fileNameFor(cleanName(edits.name), model.source.hostname);
 }
+
+/** Scan limits and guesses that the review shows but the file leaves out (CR-2). */
+export function scanNotes(model) {
+  const notes = [];
+  const { capped, unreadableStylesheets: unreadable = 0, surfaceAssumed } = model.notes ?? {};
+  if (capped) notes.push("The page has more elements than the scan limit. Some elements were not read.");
+  if (unreadable > 0) {
+    notes.push(
+      `${unreadable} ${unreadable === 1 ? "stylesheet" : "stylesheets"} from other sites could not be read. ` +
+        `${unreadable === 1 ? "Its" : "Their"} custom property names are not used.`,
+    );
+  }
+  if (surfaceAssumed) notes.push("The page sets no background color. Surface is set to white, the browser default.");
+  return notes;
+}

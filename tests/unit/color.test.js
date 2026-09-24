@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  colorName,
   contrastRatio,
   isValidHexInput,
   normalizeColor,
@@ -101,4 +102,29 @@ test("validates review hex input", () => {
   assert.ok(!isValidHexInput("#abcd"));
   assert.ok(!isValidHexInput("red"));
   assert.ok(!isValidHexInput("#GGGGGG"));
+});
+
+test("colorName gives plain names from OKLCH (FR-35)", () => {
+  const cases = {
+    "#FFFFFF": "white",
+    "#E3E8EE": "light gray",
+    "#595959": "dark gray",
+    "#1A1A1A": "near-black",
+    "#000000": "black",
+    "#E4002B": "red",
+    "#FF7A00": "orange",
+    "#FFB700": "yellow",
+    "#8B4513": "brown",
+    "#00A650": "green",
+    "#008080": "teal",
+    "#00D4FF": "cyan",
+    "#006CE4": "blue",
+    "#003B95": "dark blue",
+    "#635BFF": "violet",
+    "#800080": "dark purple",
+    "#FF00FF": "magenta",
+    "#FF69B4": "pink",
+    "#1A1F36": "dark grayish blue",
+  };
+  for (const [hex, name] of Object.entries(cases)) assert.equal(colorName(hex), name, hex);
 });

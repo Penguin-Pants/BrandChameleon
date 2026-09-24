@@ -5,7 +5,7 @@ import { lint } from "@google/design.md/linter";
 import { analyze } from "../../src/shared/analyze.js";
 import { generate } from "../../src/shared/generate.js";
 import { checkRawMarkdown } from "../../src/shared/raw-check.js";
-import { downloadBlockers, fileNameForReview, initialEdits, parseRoleInput } from "../../src/shared/review.js";
+import { downloadBlockers, fileNameForReview, initialEdits, parseRoleInput, scanNotes } from "../../src/shared/review.js";
 import { button, CONTEXT, link, record, scan, text } from "../support/synthetic.js";
 
 function baseModel(overrides = {}) {
@@ -48,7 +48,7 @@ test("page-derived text is sanitized (AC-34)", () => {
   assert.equal(yaml.name, 'Evil" name: x');
   assert.ok(!markdown.includes("token=secret"));
   assert.ok(!markdown.includes("#plans"));
-  assert.ok(markdown.includes("https://acme.example/pricing"));
+  assert.ok(!markdown.includes("acme.example/pricing"), "CR-2: the file does not name the scanned page");
 
   const hostile = analyze(
     scan({
@@ -88,7 +88,7 @@ test("a hand-set role keeps component references and says so (FR-38, FR-39)", ()
   const markdown = generate(model, edits);
   assert.ok(markdown.includes('primary: "#E4002B"'));
   assert.ok(markdown.includes('backgroundColor: "{colors.primary}"'));
-  assert.ok(markdown.includes("- **Primary (#E4002B):** Set during review."));
+  assert.ok(markdown.includes("- **Primary (#E4002B):** Main brand color.\n"), "a hand-set color has no usage claims");
 });
 
 test("uniform padding is a token, mixed padding is prose (FR-38)", () => {
@@ -108,14 +108,14 @@ test("unchecked typography levels and missing groups go to omitted (FR-36)", () 
   const edits = initialEdits(model);
   for (const level of Object.keys(edits.typography)) edits.typography[level].include = false;
   const yaml = frontMatter(generate(model, edits));
-  assert.deepEqual(yaml.omitted, [{ section: "typography", reason: "Excluded during review" }]);
+  assert.deepEqual(yaml.omitted, [{ section: "typography", reason: "Not part of this design system" }]);
   assert.ok(!("typography" in yaml));
   assert.ok(!JSON.stringify(yaml.components).includes("typography"));
 
   const plain = analyze(scan({ records: [text("rgb(0, 0, 0)")] }), CONTEXT);
   assert.deepEqual(frontMatter(generate(plain, initialEdits(plain))).omitted, [
-    { section: "rounded", reason: "Not detected on the scanned page" },
-    { section: "spacing", reason: "Not detected on the scanned page" },
+    { section: "rounded", reason: "No rounded corners defined" },
+    { section: "spacing", reason: "No spacing scale defined" },
   ]);
 });
 
@@ -195,4 +195,55 @@ test("raw markdown checks (FR-47)", () => {
   }
   assert.deepEqual(checkRawMarkdown('---\nname: "Acme #1" # note\n---\n'), []);
   assert.deepEqual(checkRawMarkdown("---\nname: Nullify\n---\n"), []);
+});
+
+test("CR-2 the file describes the design, not the scan", () => {
+  const model = baseModel({
+    page: { url: "https://acme.example/pricing", icons: [] },
+    stylesheets: { total: 3, unreadable: 2 },
+    limits: { capped: true },
+  });
+  model.notes = { capped: true, unreadableStylesheets: 2, surfaceAssumed: true };
+  const markdown = generate(model, initialEdits(model));
+  for (const text of ["BrandChameleon", "0.1.0", "2026-09-23", "acme.example/pricing", "extracted", "scan", "could not be read",
+    "not inferred", "not verified", "Browser default", "other use", "used 3 times", "Set during review"]) {
+    assert.ok(!markdown.toLowerCase().includes(text.toLowerCase()), `must not contain "${text}"`);
+  }
+  assert.doesNotMatch(markdown, /\b\d+ (links?|buttons?|headings?|elements?|times|cards?)\b/);
+  assert.equal(lint(markdown).summary.errors, 0);
+});
+
+test("CR-2 description and Overview give a factual look and feel", () => {
+  const model = baseModel();
+  const markdown = generate(model, initialEdits(model));
+  assert.equal(frontMatter(markdown).description, "Light theme with violet (#635BFF) as the primary color.");
+  const overview = markdown.split("## Overview\n\n")[1].split("\n")[0];
+  assert.equal(
+    overview,
+    "Light theme with white (#FFFFFF) pages and near-black (#111111) text. The primary color is violet (#635BFF). " +
+      "Headings use Georgia and body text uses Inter. Corners are 8px on buttons and 12px on cards.",
+  );
+  assert.ok(markdown.includes("- **Primary (#635BFF):** Main brand color. Used for button backgrounds and link text.\n"));
+  assert.ok(markdown.includes("- **headline-lg:** Georgia, 40px, weight 700. Used on `h1` elements. Full stack: Georgia, serif.\n"));
+  assert.ok(markdown.includes("- **sm (8px):** Used on buttons.\n"));
+  assert.ok(markdown.includes("- **sm:** 12px\n"));
+});
+
+test("CR-2 a monochrome palette says so in the Overview", () => {
+  const model = analyze(
+    scan({ backgrounds: { body: "rgb(255, 255, 255)" }, records: [text("rgb(17, 17, 17)"), button("rgb(0, 0, 0)", "rgb(255, 255, 255)")] }),
+    CONTEXT,
+  );
+  const markdown = generate(model, initialEdits(model));
+  assert.ok(markdown.includes("The palette is monochrome. The primary color is black (#000000)."));
+});
+
+test("CR-2 scan notes go to the sidebar", () => {
+  assert.deepEqual(scanNotes({ notes: { capped: false, unreadableStylesheets: 0, surfaceAssumed: false } }), []);
+  assert.deepEqual(scanNotes({ notes: { capped: true, unreadableStylesheets: 1, surfaceAssumed: true } }), [
+    "The page has more elements than the scan limit. Some elements were not read.",
+    "1 stylesheet from other sites could not be read. Its custom property names are not used.",
+    "The page sets no background color. Surface is set to white, the browser default.",
+  ]);
+  assert.equal(scanNotes({ notes: { unreadableStylesheets: 4 } })[0].split(".")[0], "4 stylesheets from other sites could not be read");
 });

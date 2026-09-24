@@ -138,6 +138,7 @@ legend { display: flex; align-items: center; gap: 6px; padding: 0 4px; font-weig
 .logo-option img.broken { visibility: hidden; background: var(--surface); }
 .logo-option > span { display: flex; flex-direction: column; min-width: 0; }
 .logo-label { font-weight: 500; }
+.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
 .url { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 
 .badge {

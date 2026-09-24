@@ -24,6 +24,10 @@ export const USE_WEIGHTS = {
 
 export const INTERACTIVE_USES = new Set(["buttonBg", "buttonBorder", "linkText"]);
 
+// Firefox and Chrome paint unstyled links in these colors (link, visited).
+// They are not brand choices, so link text in them does not enter the palette.
+export const BROWSER_DEFAULT_LINK_COLORS = new Set(["#0000EE", "#551A8B"]);
+
 export const CLUSTER_DISTANCE = 0.03;
 export const NEUTRAL_CHROMA = 0.04;
 export const ACCENT_MIN_DISTANCE = 0.08;

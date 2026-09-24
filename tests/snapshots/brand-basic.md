@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: "Acme Corp"
-description: "Design tokens extracted from http://127.0.0.1:4173/tests/fixtures/pages/brand-basic.html on 2026-09-23 by BrandChameleon 0.1.0."
+description: "Light theme with violet (#635BFF) as the primary color."
 colors:
   primary: "#635BFF"
   secondary: "#00D4FF"
@@ -78,45 +78,45 @@ components:
 
 ## Overview
 
-Design tokens for Acme Corp, measured from the computed styles of http://127.0.0.1:4173/tests/fixtures/pages/brand-basic.html on 2026-09-23 by BrandChameleon 0.1.0. The page rendered in light mode. Brand personality is not inferred from CSS.
+Light theme with white (#FFFFFF) pages and dark grayish blue (#1A1F36) text. The primary color is violet (#635BFF), with cyan (#00D4FF) as an accent. Headings and body text use Inter. Corners are 4px on inputs, 8px on buttons and fully rounded on images.
 
 ## Colors
 
-- **Primary (#635BFF):** Background of 3 buttons, border of 1 button, text of 6 links and text of 1 button. Declared as `--brand-primary`.
-- **Secondary (#00D4FF):** 8 other uses. Declared as `--brand-accent`.
-- **Neutral (#E3E8EE):** 5 other uses. Declared as `--line`.
-- **Surface (#FFFFFF):** Background of 2 large areas, background of 1 navigation area, text of 3 buttons and 1 other use.
-- **On-surface (#1A1F36):** Text of 5 links, text of 6 headings and 9 other uses. Declared as `--ink`.
-- **On-primary (#FFFFFF):** Background of 2 large areas, background of 1 navigation area, text of 3 buttons and 1 other use.
+- **Primary (#635BFF):** Main brand color. Used for button backgrounds, link text, button borders and button text.
+- **Secondary (#00D4FF):** Secondary brand color.
+- **Neutral (#E3E8EE):** Neutral color.
+- **Surface (#FFFFFF):** Page background. Used for large background areas, button text and navigation backgrounds.
+- **On-surface (#1A1F36):** Main text color. Used for link text and heading text.
+- **On-primary (#FFFFFF):** Text color on primary backgrounds.
 
 ## Typography
 
-- **headline-lg:** Inter, 48px, weight 700, from 1 `h1` element. Full stack: Inter, sans-serif.
-- **headline-md:** Inter, 32px, weight 600, from 2 `h2` elements. Full stack: Inter, sans-serif.
-- **headline-sm:** Inter, 24px, weight 600, from 3 `h3` elements. Full stack: Inter, sans-serif.
-- **body-md:** Inter, 16px, weight 400, from 5 `p` elements. Full stack: Inter, sans-serif.
-- **body-sm:** Inter, 14px, weight 400, from 3 `p` elements. Full stack: Inter, sans-serif.
-- **label-md:** Inter, 15px, weight 600, from 2 `a` and 1 `button` elements. Full stack: Inter, sans-serif.
+- **headline-lg:** Inter, 48px, weight 700. Used on `h1` elements. Full stack: Inter, sans-serif.
+- **headline-md:** Inter, 32px, weight 600. Used on `h2` elements. Full stack: Inter, sans-serif.
+- **headline-sm:** Inter, 24px, weight 600. Used on `h3` elements. Full stack: Inter, sans-serif.
+- **body-md:** Inter, 16px, weight 400. Used on `p` elements. Full stack: Inter, sans-serif.
+- **body-sm:** Inter, 14px, weight 400. Used on `p` elements. Full stack: Inter, sans-serif.
+- **label-md:** Inter, 15px, weight 600. Used on `a` and `button` elements. Full stack: Inter, sans-serif.
 
 ## Layout
 
-Spacing values are the most common paddings and gaps on buttons, inputs, navigation links, cards and flex or grid containers:
+Spacing scale for padding and gaps in buttons, inputs, navigation links, cards and layouts:
 
-- **xs:** 8px, used 14 times.
-- **sm:** 12px, used 16 times.
-- **md:** 16px, used 8 times.
-- **lg:** 24px, used 22 times.
-- **xl:** 32px, used 4 times.
+- **xs:** 8px
+- **sm:** 12px
+- **md:** 16px
+- **lg:** 24px
+- **xl:** 32px
 
 ## Elevation & Depth
 
-- `rgba(0, 0, 0, 0.08) 0px 2px 4px 0px` on 3 cards.
+- `rgba(0, 0, 0, 0.08) 0px 2px 4px 0px` on cards.
 
 ## Shapes
 
-- **sm (4px):** 1 input.
-- **md (8px):** 4 buttons and 3 cards.
-- **full (9999px):** 1 image.
+- **sm (4px):** Used on inputs.
+- **md (8px):** Used on buttons and cards.
+- **full (9999px):** Used on images.
 
 ## Components
 

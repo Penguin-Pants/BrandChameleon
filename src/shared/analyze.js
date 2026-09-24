@@ -3,6 +3,7 @@ import { hexToRgba, normalizeColor, oklabDistance, oklchChroma, toOklab } from "
 import {
   ACCENT_MIN_DISTANCE,
   ACCENT_MIN_WEIGHT_RATIO,
+  BROWSER_DEFAULT_LINK_COLORS,
   CLUSTER_DISTANCE,
   INTERACTIVE_USES,
   MAX_CANDIDATES,
@@ -100,7 +101,11 @@ function collectColorUses(records) {
     if (record.border) {
       info.border = addUse(record.border[2], record.kind === "button" ? "buttonBorder" : "other", record);
     }
-    if (record.color) {
+    // FR-21: an unstyled link shows the browser's default blue, which is not a
+    // brand choice. Its text stays unset too, so the fuzzy cluster lookup cannot
+    // map it onto a nearby real color (on-surface, the link component).
+    const defaultLink = record.kind === "link" && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(record.color));
+    if (record.color && !defaultLink) {
       const use = { button: "buttonText", link: "linkText", heading: "headingText" }[record.kind];
       if (use) info.text = addUse(record.color, use, record);
       else if (record.textLen > 0 || record.kind === "input") info.text = addUse(record.color, "other", record);
@@ -227,9 +232,12 @@ function assignRoles({ clusters, memberOf, textByHex, parsed, backgrounds }) {
   const byInteractive = (c) => c.interactive * 1e6 + c.weight;
   const hinted = chromatic.filter((c) => c.interactive > 0 && c.customProps.some((n) => /primary|brand/i.test(n)));
   const interactive = chromatic.filter((c) => c.interactive > 0);
+  // A colored header or navigation bar is brand evidence when no control is colored.
+  const navChrome = chromatic.filter((c) => (c.uses.navBg ?? 0) + (c.uses.navSvg ?? 0) > 0);
   let primary =
     maxBy(hinted, byInteractive) ??
     maxBy(interactive, byInteractive) ??
+    maxBy(navChrome, (c) => c.weight) ??
     maxBy(brandPool.filter((c) => (c.uses.buttonBg ?? 0) > 0), (c) => c.uses.buttonBg) ??
     maxBy(brandPool.filter((c) => (c.uses.linkText ?? 0) > 0), (c) => c.uses.linkText) ??
     maxBy(chromatic, (c) => c.weight);
@@ -548,10 +556,10 @@ const sizeOf = (sizes) => {
 
 function analyzeLogos(page, logoImages) {
   const logos = [];
-  const add = (url, label, width, height) => {
+  const add = (url, label, width, height, unverified = false) => {
     const clean = cleanUrl(url, page.url);
     if (!clean || logos.some((l) => l.url === clean)) return;
-    logos.push({ url: clean, label, width: width || null, height: height || null });
+    logos.push({ url: clean, label, width: width || null, height: height || null, ...(unverified && { unverified }) });
   };
   const headerImage = [logoImages?.byAttr, logoImages?.byHomeLink].find((image) => image && cleanUrl(image.src, page.url));
   if (headerImage) add(headerImage.src, "Header logo", headerImage.width, headerImage.height);
@@ -571,7 +579,8 @@ function analyzeLogos(page, logoImages) {
     add(icon.href, "Site icon", size?.width, size?.height);
   }
   if (/^https?:$/.test(new URL(page.url).protocol)) {
-    add(`${page.origin}/favicon.ico`, "Default favicon path (not verified)");
+    // A guess: the page does not link it, and the scan cannot check it (FR-52).
+    add(`${page.origin}/favicon.ico`, "Site favicon", null, null, true);
   }
   if (page.ogImage) add(page.ogImage, "Social preview image (og:image)");
   return logos;
