@@ -35,7 +35,8 @@ Run this checklist in real Firefox before each AMO submission. Automated tests r
 
 ## Validate the file
 
-- [ ] Run `npx @google/design.md lint <file>`. The summary shows `"errors": 0`.
+- [ ] Run `npx -p @google/design.md designmd lint <file>`. The summary shows `"errors": 0`. Warnings are allowed.
+  - Use the `designmd` command name. On Windows, `npx @google/design.md` opens the `design.md` launcher file in your Markdown editor and does not run the linter.
 
 ## Edits and state
 
