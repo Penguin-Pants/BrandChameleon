@@ -132,7 +132,7 @@ Spacing scale for padding and gaps in buttons, inputs, navigation links, cards a
 - Do pair on-primary text with primary backgrounds (4.70:1, passes WCAG AA).
 - Do pair on-surface text with surface backgrounds (16.24:1, passes WCAG AA).
 - Do set headlines in Inter and body text in Inter.
-- Do use rounded.md (8px) corners on buttons.
+- Do use rounded.md (8px) corners on primary buttons.
 
 ## Brand Assets
 

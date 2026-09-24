@@ -294,7 +294,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
     - The same rule for on-surface on surface.
     - Primary on surface below 4.5:1: "Don't use primary for body text on surface (<r>:1, below 4.5:1)."
     - Headline and body families both exist: "Do set headlines in <family> and body text in <family>."
-    - button-primary has a rounded reference: "Do use <token> (<value>) corners on buttons."
+    - button-primary has a rounded reference: "Do use <token> (<value>) corners on primary buttons." (CR-5)
   - **Brand Assets**: "- **Logo:** <url> (<source label>[, <w> x <h> px])". Omitted when the logo is "None".
 - **FR-40** Page-derived text is sanitized before output and display. Control characters and newlines are removed. The name is at most 100 characters. Font family names keep only Unicode letters, digits, spaces and `-_.'` and are at most 64 characters. URLs are written only when they parse as `http:` or `https:`.
 - **FR-41** Output is deterministic. The same scan data, edits and clock give byte-identical output.
@@ -566,3 +566,10 @@ None.
 - **Fix:** FR-12 now reads a covering `::before` or `::after` fill on button-like elements and links with a transparent background, including its corner radius. Coverage uses the layer's painted box after offsets and transforms, so a hover effect such as `transform: scaleX(0)` does not add a fill. Other elements are not changed, so decorative layers on cards and sections do not change surface or card detection.
 - **Expected effect on booking.com:** primary `#006CE4` gets button backgrounds, `button-primary` and `on-primary` (white, 4.92:1) are written, and the Do's and Don'ts gain the primary button rules.
 - **Changed:** FR-12 and new AC-45.
+- **Result:** the owner's fifth Booking.com file has primary `#006CE4` "Used for button backgrounds", `button-primary` (4px corners, white text), `on-primary` `#FFFFFF` (4.92:1) and the primary button rules. The tertiary red `#D4111E` is gone: the button fills raise primary's weight, and the red is now below 10% of it (FR-23).
+
+### CR-5: Corner rule names primary buttons (2026-09-24)
+
+- **Owner check:** the fifth Booking.com file says "Do use rounded.sm (4px) corners on buttons.", but its `button-secondary` uses `rounded.full`. The rule comes from `button-primary` only, so the two statements disagree.
+- **Fix:** the rule now says "corners on primary buttons", like the rule "for primary button backgrounds".
+- **Changed:** FR-39 (Do's and Don'ts) and the `brand-basic` snapshot.
