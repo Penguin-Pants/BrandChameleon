@@ -422,7 +422,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-34** A title of `Evil"\nname: x` gives YAML that parses with exactly one `name` key. Font families with markdown or control characters are sanitized. The file does not contain the scanned URL, its query or its fragment.
 - **AC-35** Same input and fixed clock give byte-identical output.
 - **AC-36** `npm run build` makes a zip in `web-ext-artifacts/`. It contains `manifest.json` and no `tests/` or `node_modules/`.
-- **AC-37** PNG icons are exactly 48, 96 and 128 px. Screenshots are exactly 2400 x 1800. The summary is 250 characters or fewer, and the name with the short summary is 70 characters or fewer. `PRIVACY.md` and an MIT `LICENSE` exist. `amo/privacy-policy.md` has no headings and no tables (CR-6).
+- **AC-37** PNG icons are exactly 48, 96 and 128 px. Screenshots are exactly 2400 x 1800. The summary is 250 characters or fewer, and the name with the short summary is 70 characters or fewer. `PRIVACY.md` and an MIT `LICENSE` exist. `amo/privacy-policy.md` has no headings and no tables. Both privacy policies say that logo thumbnail requests give the image server the user's IP address (CR-6).
 - **AC-38** `README.md` covers install, use, development, tests, build and AMO submission. The manual checklist exists.
 - **AC-39** The CI workflow runs lint and tests on pull requests.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
@@ -587,4 +587,6 @@ None.
   - Screenshots are rendered at 2400 x 1800.
   - `amo/listing.md` is an answer sheet in AMO form order: Web Development only, no tags, a short summary for the 70-character rule and reviewer test steps.
   - New `amo/privacy-policy.md` with the same content as `PRIVACY.md` in the AMO Markdown subset.
-- **Changed:** FR-01, FR-57, AC-37, `README.md`, `amo/listing.md`, new `amo/privacy-policy.md` and the AMO screenshots.
+  - Both policies no longer say that no data goes to any third party. Logo thumbnails load image URLs that the page declares, which can be on other servers. Each request gives that server the IP address and request headers, and it can include cookies (Codex review).
+  - The screenshot script waits for the site frame and scrolls only the sidebar document.
+- **Changed:** FR-01, FR-57, AC-37, `PRIVACY.md`, `README.md`, `amo/listing.md`, new `amo/privacy-policy.md` and the AMO screenshots.

@@ -52,9 +52,14 @@ async function renderScreenshots(browser) {
       return route.fulfill({ path: `${ROOT}tests/fixtures/pages/assets/${file}`, contentType: "image/svg+xml" });
     });
     await page.goto("/scripts/screenshot-stage.html");
+    // Wait for both panes: a site frame that has not loaded renders blank.
+    await page.frameLocator("#site").locator("h1").waitFor();
     const sidebar = page.frameLocator("#sidebar");
     await sidebar.locator("#view-review").waitFor();
-    if (shot.scroll) await sidebar.locator(shot.scroll).evaluate((el) => el.scrollIntoView({ block: "start" }));
+    // Scroll only the sidebar document. scrollIntoView can also scroll the stage page.
+    if (shot.scroll) {
+      await sidebar.locator(shot.scroll).evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY));
+    }
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${ROOT}amo/screenshots/${shot.file}` });
     await page.close();

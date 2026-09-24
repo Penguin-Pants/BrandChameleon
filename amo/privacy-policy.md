@@ -1,4 +1,4 @@
-**BrandChameleon collects no data.** It sends no data to the developer or to any third party.
+**BrandChameleon collects no data.** The developer receives nothing: no scans, no files and no usage data. The only network requests are the logo thumbnails described under **Network requests**.
 
 **What the extension reads**
 
@@ -19,7 +19,7 @@ It reads only the tab where you clicked the button, and only at that moment.
 
 **Network requests**
 
-The extension itself makes no network requests. The review sidebar shows small thumbnails of logo candidates. To show them, Firefox loads those images from the URLs found on the scanned page. These requests go to the same servers that the page already uses and send no referrer.
+The extension's code sends no data over the network. The review sidebar shows small thumbnails of logo candidates. To show them, Firefox loads each image from the URL that the scanned page declares, for example its icon or `og:image`. That URL can point to the site's own server or to another server, such as an image host. Like any web image, each request gives that server your IP address and the normal browser request headers, and it can include cookies that Firefox holds for that server. The extension adds no data to these requests and sends no referrer.
 
 **Permissions**
 

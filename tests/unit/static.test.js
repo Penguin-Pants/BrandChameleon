@@ -81,11 +81,15 @@ test("AC-37 icons, screenshots, listing summary, privacy policy and license", as
   assert.ok(summary.length > 0 && summary.length <= 250, `summary is ${summary.length} characters`);
   // With AMO's content-optimization switch, name and summary together are at most 70 characters.
   assert.ok(name.length + short.length <= 70, `name and short summary are ${name.length + short.length} characters`);
-  assert.match(await readFile(join(ROOT, "PRIVACY.md"), "utf8"), /collects no data/);
   // AMO removes headings and does not render tables in the privacy policy field.
   const amoPolicy = await readFile(join(ROOT, "amo/privacy-policy.md"), "utf8");
-  assert.match(amoPolicy, /collects no data/);
   assert.doesNotMatch(amoPolicy, /^(#|\|)/m);
+  for (const policy of [await readFile(join(ROOT, "PRIVACY.md"), "utf8"), amoPolicy]) {
+    assert.match(policy, /collects no data/);
+    // Logo thumbnails load page-declared image URLs, which can be on other servers.
+    assert.match(policy, /IP address/);
+    assert.doesNotMatch(policy, /any third party/);
+  }
   assert.match(await readFile(join(ROOT, "LICENSE"), "utf8"), /^MIT License/);
 });
 

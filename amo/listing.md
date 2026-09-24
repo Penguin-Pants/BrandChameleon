@@ -94,7 +94,7 @@ BrandChameleon turns the look of a website into a DESIGN.md file. DESIGN.md is a
 
 **Privacy**
 
-- No data collection. No network requests of its own.
+- No data collection. The only network requests are logo thumbnails, loaded from image URLs on the scanned page.
 - Reads only the tab you click, only when you click.
 - Uses the downloads permission only to save the file you create. It does not read your download history.
 - Skips common cookie banners and chat widgets.
