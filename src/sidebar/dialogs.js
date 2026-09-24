@@ -1,10 +1,11 @@
 // One modal dialog for Replace, Regenerate and Raw check (section 7.3).
 // Focus starts on the safe button and returns to the opener on close.
+// `onConfirm` runs inside the confirm click, for APIs that need user input.
 import { h } from "./dom.js";
 
 let pending = null;
 
-export function confirmDialog({ title, message, items = [], confirmLabel, cancelLabel, opener }) {
+export function confirmDialog({ title, message, items = [], confirmLabel, cancelLabel, opener, onConfirm }) {
   const dialog = document.getElementById("dialog");
   const confirm = document.getElementById("dialog-confirm");
   const cancel = document.getElementById("dialog-cancel");
@@ -28,7 +29,10 @@ export function confirmDialog({ title, message, items = [], confirmLabel, cancel
       resolve(result);
     };
     pending = finish;
-    confirm.onclick = () => finish(true);
+    confirm.onclick = () => {
+      finish(true);
+      onConfirm?.();
+    };
     cancel.onclick = () => finish(false);
     dialog.oncancel = (event) => {
       event.preventDefault();

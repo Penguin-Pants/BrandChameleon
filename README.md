@@ -26,7 +26,7 @@ Requires Firefox desktop 140 or later. Firefox for Android is not supported.
    - **Typography, Shapes, Spacing, Components:** include or exclude each group. Edit font families.
    - **Logo:** choose a candidate URL or None.
    - **Markdown:** edit the final text if you like.
-4. Click **Download**. Firefox saves `<company-slug>_design.md`.
+4. Click **Download**. Firefox saves `<company-slug>_design.md` to your download folder and the sidebar closes.
 
 ### Output example
 

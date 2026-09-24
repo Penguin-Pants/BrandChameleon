@@ -19,7 +19,7 @@ test("AC-02 manifest keys and permissions", async () => {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.name, "BrandChameleon: DESIGN.md Generator");
   assert.equal(manifest.version, "0.1.0");
-  assert.deepEqual(manifest.permissions, ["activeTab", "scripting", "storage"]);
+  assert.deepEqual(manifest.permissions, ["activeTab", "downloads", "scripting", "storage"]);
   for (const key of ["host_permissions", "optional_permissions", "optional_host_permissions", "content_scripts"]) {
     assert.ok(!(key in manifest), `${key} must not exist`);
   }

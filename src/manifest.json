@@ -23,7 +23,7 @@
     "scripts": ["background/background.js"],
     "type": "module"
   },
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "downloads", "scripting", "storage"],
   "browser_specific_settings": {
     "gecko": {
       "id": "brandchameleon@penguin-pants",
