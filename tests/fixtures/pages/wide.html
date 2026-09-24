@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Wide Page</title>
+<style>body { margin: 0; color: #1a1f36; font: 12px/16px sans-serif; } span { display: none; }</style></head>
+<body>
+  <main id="root"><h1>Wide Page</h1><div><div><button style="background:#e4002b;color:#fff">Early nested button</button></div></div></main>
+  <script>
+    // 120,000 hidden siblings in one parent: the collector must not copy them all.
+    const root = document.getElementById("root");
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < 120000; i += 1) fragment.append(document.createElement("span"));
+    root.append(fragment);
+  </script>
+</body></html>

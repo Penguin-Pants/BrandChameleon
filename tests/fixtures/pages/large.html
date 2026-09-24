@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Large Page</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 400 14px/20px sans-serif; }
+  .row { display: flex; gap: 8px; padding: 4px; border-bottom: 1px solid #e3e8ee; }
+  .row a { color: #635bff; }
+  .row .btn { display: inline-block; background: #635bff; color: #fff; padding: 4px 8px; border-radius: 4px; }
+</style></head>
+<body>
+  <main id="root"><h1>Large Page</h1></main>
+  <script>
+    const root = document.getElementById("root");
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < 1500; i += 1) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<span>Item ${i}</span><a href="/item/${i}">Open</a><a class="btn" href="/buy/${i}">Buy</a>`;
+      fragment.append(row);
+    }
+    root.append(fragment);
+  </script>
+</body></html>

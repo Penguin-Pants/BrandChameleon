@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BrandChameleon</title>
+  <link rel="stylesheet" href="sidebar.css">
+  <script type="module" src="sidebar.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1>BrandChameleon</h1>
+  </header>
+
+  <main id="main">
+    <section id="view-empty" class="view" hidden>
+      <p class="lead">Click the BrandChameleon toolbar button to scan the current page.</p>
+    </section>
+
+    <section id="view-loading" class="view" aria-busy="true" hidden>
+      <p class="lead" id="loading-text">Scanning this page...</p>
+      <div class="progress" role="progressbar" aria-labelledby="loading-text"><span></span></div>
+    </section>
+
+    <section id="view-error" class="view" hidden>
+      <h2 id="error-title">Scan failed</h2>
+      <p id="error-text"></p>
+    </section>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <form id="view-review" class="view review" hidden novalidate></form>
+  </main>
+
+  <footer id="review-footer" class="app-footer" hidden>
+    <p id="status" class="status" role="status"></p>
+    <p class="file">File: <output id="filename" for="name-input"></output></p>
+    <p id="blockers" class="blockers"></p>
+    <button id="download" type="button" class="primary">Download</button>
+  </footer>
+
+  <dialog id="dialog" aria-labelledby="dialog-title" aria-describedby="dialog-body">
+    <h2 id="dialog-title"></h2>
+    <div id="dialog-body"></div>
+    <div class="dialog-actions">
+      <button id="dialog-confirm" type="button"></button>
+      <button id="dialog-cancel" type="button" class="primary"></button>
+    </div>
+  </dialog>
+</body>
+</html>

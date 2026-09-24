@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Clobber Test</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 16px/24px sans-serif; }
+  button { background: #e4002b; color: #ffffff; padding: 12px 24px; border: 0; }
+</style></head>
+<body>
+  <main>
+    <h1>Clobber Test</h1>
+    <p>Shopify-style forms use an input named "id".</p>
+    <!-- form.id returns the input element, not a string. -->
+    <form action="/cart/add"><input type="hidden" name="id" value="123"><button type="submit">Add to cart</button></form>
+    <!-- form.localName returns the input element; the collector must skip only this subtree. -->
+    <form action="/other"><input type="hidden" name="localName" value="x"><button type="submit" style="background:#00aa55">Other</button></form>
+  </main>
+</body></html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Many Props</title>
+<style id="props"></style>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 16px/24px sans-serif; }
+  .a { background: #0055ff; color: #ffffff; padding: 8px; }
+  .b { background: #e4002b; color: #ffffff; padding: 8px; }
+</style>
+<script>
+  // 600 neutral custom properties, then the brand one last.
+  const lines = [];
+  for (let i = 0; i < 600; i += 1) lines.push(`--token-${i}: #${(i % 4096).toString(16).padStart(3, "0")};`);
+  lines.push("--brand-primary: #e4002b;");
+  document.getElementById("props").textContent = `:root { ${lines.join(" ")} }`;
+</script>
+</head>
+<body>
+  <main>
+    <h1>Many Props</h1>
+    <p>Two button colors; the brand variable names the red one.</p>
+    <button class="a">One</button><button class="a">Two</button><button class="a">Three</button>
+    <button class="b">Brand</button>
+  </main>
+</body></html>

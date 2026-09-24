@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "BrandChameleon: DESIGN.md Generator",
+  "version": "0.1.0",
+  "description": "Scan a website's styles and download a DESIGN.md file with its brand colors, fonts, shapes and logo URL.",
+  "homepage_url": "https://github.com/Penguin-Pants/BrandChameleon",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Scan page with BrandChameleon",
+    "default_icon": "icons/icon.svg"
+  },
+  "sidebar_action": {
+    "default_title": "BrandChameleon",
+    "default_panel": "sidebar/sidebar.html",
+    "default_icon": "icons/icon.svg",
+    "open_at_install": false
+  },
+  "background": {
+    "scripts": ["background/background.js"],
+    "type": "module"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "brandchameleon@penguin-pants",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

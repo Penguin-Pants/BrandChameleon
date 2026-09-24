@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Adopted Sheets</title>
+<style>
+  body { margin: 0; background: #ffffff; color: #1a1f36; font: 16px/24px sans-serif; }
+  .a { background: #0055ff; color: #ffffff; padding: 8px; }
+  .b { background: #e4002b; color: #ffffff; padding: 8px; }
+</style>
+<script>
+  // Brand variables live only in a constructed stylesheet.
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(":root { --brand-primary: #e4002b; }");
+  document.adoptedStyleSheets = [sheet];
+</script>
+</head>
+<body>
+  <main>
+    <h1>Adopted Sheets</h1>
+    <p>The brand variable comes from document.adoptedStyleSheets.</p>
+    <button class="a">One</button><button class="a">Two</button><button class="a">Three</button>
+    <button class="b">Brand</button>
+  </main>
+</body></html>

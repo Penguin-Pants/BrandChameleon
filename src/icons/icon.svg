@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>BrandChameleon</title>
+  <rect width="128" height="128" rx="28" fill="#1B2440"/>
+  <rect x="16" y="90" width="30" height="22" rx="6" fill="#FF6B4A"/>
+  <rect x="49" y="90" width="30" height="22" rx="6" fill="#FFC53D"/>
+  <rect x="82" y="90" width="30" height="22" rx="6" fill="#36C98E"/>
+  <path d="M40 72 C38 48 56 30 80 32 C98 34 110 46 112 60 C112 66 108 70 102 70 L92 70 C88 76 80 78 72 78 L50 78 C44 78 40 76 40 72 Z" fill="#36C98E"/>
+  <path d="M52 34 L58 26 L64 32 L70 24 L76 31 L82 25 L86 33" fill="none" stroke="#36C98E" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M42 70 C28 72 16 64 17 52 C18 42 30 38 36 45 C41 51 36 58 30 56" fill="none" stroke="#36C98E" stroke-width="7" stroke-linecap="round"/>
+  <path d="M60 78 L56 88 M82 76 L86 88" stroke="#36C98E" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="92" cy="50" r="10" fill="#FFFFFF"/>
+  <circle cx="95" cy="50" r="4.5" fill="#1B2440"/>
+</svg>
