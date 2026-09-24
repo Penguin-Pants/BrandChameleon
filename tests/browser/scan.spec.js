@@ -5,7 +5,7 @@ import { collectPage } from "../../src/collector/collect-page.js";
 import { analyze, ScanError } from "../../src/shared/analyze.js";
 import { GROUPS } from "../../src/shared/constants.js";
 import { generate } from "../../src/shared/generate.js";
-import { initialEdits } from "../../src/shared/review.js";
+import { initialEdits, scanNotes } from "../../src/shared/review.js";
 import { COLLECTOR_OPTIONS, scanFixture } from "../support/scan.js";
 
 const CONTEXT = { scannedAt: "2026-09-23T12:00:00.000Z", extVersion: "0.1.0" };
@@ -50,7 +50,7 @@ test("AC-08 monochrome brand uses the button color", async ({ page }) => {
   const { model, markdown } = await analyzeFixture(page, "mono");
   expect(roleHexes(model).primary).toBe("#000000");
   expect(roleHexes(model)["on-primary"]).toBe("#FFFFFF");
-  expect(markdown).toContain("The brand palette is monochrome. No saturated color is used on buttons or links.");
+  expect(markdown).toContain("The palette is monochrome. The primary color is black (#000000).");
 });
 
 test("AC-09 consent and chat overlays are skipped, bakery content is kept", async ({ page }) => {
@@ -76,10 +76,12 @@ test("AC-11 open shadow roots are read, closed ones are not", async ({ page }) =
 });
 
 test("AC-12 cross-origin stylesheets are counted and reported", async ({ page }) => {
-  const { scan, markdown } = await analyzeFixture(page, "cross-origin");
+  const { scan, model, markdown } = await analyzeFixture(page, "cross-origin");
   expect(scan.stylesheets).toEqual({ readable: 1, unreadable: 1 });
   expect(scan.customProps.map((p) => p.name)).toEqual(["--local-brand"]);
-  expect(markdown).toContain("1 stylesheet could not be read");
+  // CR-2: the note shows in the sidebar, not in the file.
+  expect(scanNotes(model)).toContain("1 stylesheet from other sites could not be read. Its custom property names are not used.");
+  expect(markdown).not.toContain("could not be read");
 });
 
 test("AC-13 typography levels", async ({ page }) => {
@@ -138,7 +140,7 @@ test("AC-16 every fixture and every group combination lints with 0 errors", asyn
     const { summary, findings } = lint(markdown);
     expect(summary.errors, `mask ${mask}: ${JSON.stringify(findings)}`).toBe(0);
     for (const [i, group] of GROUPS.entries()) {
-      if (!(mask & (1 << i))) expect(markdown).toContain(`  - section: ${group}\n    reason: "Excluded during review"`);
+      if (!(mask & (1 << i))) expect(markdown).toContain(`  - section: ${group}\n    reason: "Not part of this design system"`);
     }
   }
 });
@@ -164,10 +166,11 @@ test("AC-20 logo candidates follow FR-32 order", async ({ page, baseURL }) => {
     ["Header logo", `${assets}/logo.svg`],
     ["Apple touch icon", `${assets}/apple-touch-icon.png`],
     ["Site icon", `${assets}/favicon.svg`],
-    ["Default favicon path (not verified)", `${baseURL}/favicon.ico`],
+    ["Site favicon", `${baseURL}/favicon.ico`],
     ["Social preview image (og:image)", `${baseURL}/tests/fixtures/pages/assets/og.png`],
   ]);
   expect(basic.model.logos[0]).toMatchObject({ width: 120, height: 32 });
+  expect(basic.model.logos.filter((l) => l.unverified).map((l) => l.label)).toEqual(["Site favicon"]);
 
   const logos = await analyzeFixture(page, "logos");
   expect(logos.model.logos.map((l) => l.url)).toEqual([
@@ -243,7 +246,7 @@ test("AC-32 large page stays fast and small", async ({ page }) => {
   expect(scan.limits.visible).toBe(5000);
   const stored = JSON.stringify({ model, edits: initialEdits(model), markdown: generate(model, initialEdits(model)) });
   expect(stored.length).toBeLessThan(1024 * 1024);
-  expect(generate(model, initialEdits(model))).toContain("The scan reached its element limit.");
+  expect(scanNotes(model)[0]).toBe("The page has more elements than the scan limit. Some elements were not read.");
 });
 
 test("Regression snapshot of brand-basic output", async ({ page }) => {

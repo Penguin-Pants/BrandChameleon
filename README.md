@@ -34,7 +34,7 @@ Requires Firefox desktop 140 or later. Firefox for Android is not supported.
 ---
 version: alpha
 name: "Acme Corp"
-description: "Design tokens extracted from https://acme.example/ on 2026-09-23 by BrandChameleon 0.1.0."
+description: "Light theme with violet (#635BFF) as the primary color."
 colors:
   primary: "#635BFF"
   secondary: "#00D4FF"
@@ -57,6 +57,12 @@ components:
 # Acme Corp
 
 ## Overview
+
+Light theme with white (#FFFFFF) pages and dark grayish blue (#1A1F36) text. The primary color is violet (#635BFF), with cyan (#00D4FF) as an accent. Headings and body text use Inter.
+
+## Colors
+
+- **Primary (#635BFF):** Main brand color. Used for button backgrounds, link text, button borders and button text.
 ...
 ## Brand Assets
 

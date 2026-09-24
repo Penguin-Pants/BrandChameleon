@@ -313,6 +313,43 @@ export function oklchChroma(hex) {
   return Math.hypot(a, b);
 }
 
+// OKLCH hue ranges in degrees; red wraps around 0.
+const HUE_NAMES = [
+  [15, "pink"],
+  [45, "red"],
+  [75, "orange"],
+  [115, "yellow"],
+  [170, "green"],
+  [245, "cyan"],
+  [275, "blue"],
+  [305, "violet"],
+  [350, "purple"],
+  [360, "pink"],
+];
+
+/** A plain English name such as "dark blue" or "near-black", from OKLCH values. */
+export function colorName(hex) {
+  const [lightness, a, b] = toOklab(hexToRgba(hex));
+  const chroma = Math.hypot(a, b);
+  if (chroma < 0.04) {
+    if (lightness >= 0.97) return "white";
+    if (lightness >= 0.85) return "light gray";
+    if (lightness >= 0.6) return "gray";
+    if (lightness >= 0.35) return "dark gray";
+    return lightness >= 0.12 ? "near-black" : "black";
+  }
+  const hue = (Math.atan2(b, a) * 180) / Math.PI + 360;
+  let name = HUE_NAMES.find(([limit]) => hue % 360 < limit)[1];
+  if (name === "pink" && lightness < 0.6) name = "red";
+  if ((name === "orange" || name === "yellow") && lightness < 0.55) return "brown";
+  if (name === "cyan" && lightness < 0.6) name = "teal";
+  if (name === "purple" && lightness >= 0.65) name = "magenta";
+  const tone = chroma < 0.08 ? "grayish " : "";
+  if (lightness < 0.45) return `dark ${tone}${name}`;
+  if (lightness > 0.85 && chroma < 0.15) return `light ${tone}${name}`;
+  return `${tone}${name}`;
+}
+
 function luminance({ r, g, b }) {
   const [lr, lg, lb] = [r, g, b].map(srgbToLinear);
   return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;

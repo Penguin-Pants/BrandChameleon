@@ -10,6 +10,7 @@ import {
   initialEdits,
   parseRoleInput,
   roleHex,
+  scanNotes,
 } from "../shared/review.js";
 import { confirmDialog } from "./dialogs.js";
 import { h } from "./dom.js";
@@ -372,6 +373,7 @@ function logoBlock() {
       }, radio),
     );
     const size = logo.width && logo.height ? `, ${logo.width} x ${logo.height} px` : "";
+    const guess = logo.unverified ? " (not verified)" : "";
     const thumbnail = h("img", { alt: "", width: 32, height: 32, referrerpolicy: "no-referrer", loading: "lazy" });
     thumbnail.addEventListener("error", () => thumbnail.classList.add("broken"), { once: true });
     if (/^https?:/.test(logo.url)) thumbnail.src = logo.url;
@@ -380,7 +382,7 @@ function logoBlock() {
       { for: `logo-${index}`, class: "logo-option" },
       radio,
       thumbnail,
-      h("span", {}, h("span", { class: "logo-label" }, `${logo.label}${size}`), h("span", { class: "url", title: logo.url }, logo.url)),
+      h("span", {}, h("span", { class: "logo-label" }, `${logo.label}${size}${guess}`), h("span", { class: "url", title: logo.url }, logo.url)),
     );
   });
   const none = h("input", { type: "radio", name: "logo", id: "logo-none", value: "none" });
@@ -417,6 +419,7 @@ function buildReview() {
   );
 
   const scanned = new Date(model.source.scannedAt);
+  const notes = scanNotes(model);
   const typographyLevels = TYPE_LEVELS.filter((level) => model.typography[level]);
 
   const markdown = h("textarea", { id: "markdown", rows: 18, spellcheck: "false", autocomplete: "off" });
@@ -437,6 +440,16 @@ function buildReview() {
         model.source.hostname || "Local page",
       ),
       h("p", { class: "muted" }, "Scanned ", h("time", { datetime: model.source.scannedAt }, scanned.toLocaleString())),
+      notes.length
+        ? [
+            h("h3", { id: "scan-notes-title" }, "Scan notes"),
+            h(
+              "ul",
+              { id: "scan-notes", class: "notes", "aria-labelledby": "scan-notes-title" },
+              notes.map((note) => h("li", {}, note)),
+            ),
+          ]
+        : null,
     ),
     sectionBlock("name", "Name", h("label", { for: "name-input" }, "Company name", name)),
     sectionBlock(

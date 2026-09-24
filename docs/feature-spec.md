@@ -78,10 +78,10 @@ The repository contains only `README.md`. No extension code, tests, build or CI 
 ---
 version: alpha
 name: "Acme Corp"
-description: "Design tokens extracted from https://acme.example/ on 2026-09-23 by BrandChameleon 0.1.0."
+description: "Light theme with violet (#635BFF) as the primary color."
 omitted:                      # only when a group is missing or excluded
   - section: spacing
-    reason: "Not detected on the scanned page"
+    reason: "No spacing scale defined"
 colors: { ... }
 typography: { ... }
 rounded: { ... }
@@ -213,8 +213,10 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 - **FR-21** `primary`:
   1. If a chromatic cluster has an interactive weight above 0 and contains the resolved color of a custom property whose name contains `primary` or `brand`, that cluster is primary. If more than one cluster qualifies, the higher interactive weight wins.
   2. Else the chromatic cluster with the highest interactive weight is primary. Ties go to the higher total weight.
-  3. Else (monochrome) primary is the cluster with the highest Button background weight, excluding `surface`. Else the cluster with the highest Link text weight. Else the chromatic cluster with the highest total weight. Else primary is empty.
-  4. When primary is neutral, the Overview says "The brand palette is monochrome. No saturated color is used on buttons or links."
+  3. Else the chromatic cluster with the highest total weight among clusters with Nav background or Nav SVG uses is primary (a colored header is brand evidence, CR-2).
+  4. Else (monochrome) primary is the cluster with the highest Button background weight, excluding `surface`. Else the cluster with the highest Link text weight. Else the chromatic cluster with the highest total weight. Else primary is empty.
+  5. When primary is neutral, the Overview says "The palette is monochrome." (FR-39).
+  Link text in a browser default link color (`#0000EE` or `#551A8B`) does not enter the palette, because unstyled links show it (CR-2). A page whose only color is such link text gets an empty primary, and review asks you to choose one (FR-44).
 - **FR-22** `on-primary` is the most common text color cluster on buttons whose background cluster is primary. It is absent when no such button exists.
 - **FR-23** `secondary` is the chromatic cluster with the highest total weight that is at least OKLab distance 0.08 from primary and has at least 10% of primary's total weight. `tertiary` uses the same rule and is also at least 0.08 from secondary.
 - **FR-24** `neutral` is the neutral cluster with the highest total weight that is at least OKLab distance 0.05 from `surface` and `on-surface`.
@@ -250,7 +252,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   1. Visible `img` inside Nav whose `id`, class, `alt` or `src` contains "logo" (case-insensitive), else the first visible `img` inside an `a` in Nav whose `href` resolves to the page origin with path `/`.
   2. `link[rel~="apple-touch-icon"]`, largest `sizes` first.
   3. `link[rel~="icon"]`, largest `sizes` first, SVG counts as largest.
-  4. `<origin>/favicon.ico`, labeled "Default favicon path (not verified)".
+  4. `<origin>/favicon.ico`, labeled "Site favicon" and marked unverified. The sidebar shows "(not verified)" after its label; the file does not (CR-2).
   5. `meta[property="og:image"]`.
 
   Relative URLs become absolute. Only `http:` and `https:` URLs are kept. `data:` URLs and inline SVG are skipped. Known width and height are kept (from `sizes` or natural image size).
@@ -259,8 +261,8 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 
 - **FR-33** Front matter key order: `version`, `name`, `description`, `omitted`, `colors`, `typography`, `rounded`, `spacing`, `components`. Color order: `primary`, `secondary`, `tertiary`, `neutral`, `surface`, `on-surface`, `on-primary`. Typography order: the table order in FR-26. Property order: `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`.
 - **FR-34** All YAML string values are double-quoted with JSON-style escapes. `fontWeight` and `lineHeight` are bare numbers.
-- **FR-35** `description` is "Design tokens extracted from <url> on <YYYY-MM-DD> by BrandChameleon <version>." The URL has no query string and no fragment. The date is UTC.
-- **FR-36** `omitted` lists each of `typography`, `rounded`, `spacing` and `components` that is absent. The reason is "Not detected on the scanned page" or "Excluded during review".
+- **FR-35** `description` is "<Light|Dark> theme with <color name> (<primary hex>) as the primary color." The file names no tool, source URL or scan date (CR-2). Color names come from OKLCH lightness, chroma and hue (`colorName()` in `color.js`), for example "dark blue" or "near-black".
+- **FR-36** `omitted` lists each of `typography`, `rounded`, `spacing` and `components` that is absent. The reason is "Not part of this design system" when the scan found values but the review excluded them. Else it is "No typography levels defined", "No rounded corners defined", "No spacing scale defined" or "No components defined".
 - **FR-37** Components. Each is written only when its source elements exist and the Components group is included. A property is written only when it has a value. A button style is the tuple of background, text color, radius, paddings, height and typography style.
   - `page`: `backgroundColor` = surface, `textColor` = on-surface, `typography` = body-md.
   - `button-primary`: the most common style of buttons with a primary background. `backgroundColor`, `textColor`, `rounded`, `padding`, `height`, `typography` = label-md.
@@ -277,13 +279,13 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   - `padding` is written only when all 4 sides are equal. Otherwise the Components prose states "<v>px vertical and <h>px horizontal padding" (or all 4 values if top and bottom or left and right differ).
   - `height` is whole px.
   - Only the 8 spec properties are used: `backgroundColor`, `textColor`, `typography`, `rounded`, `padding`, `size`, `height`, `width`. Borders appear only in prose.
-- **FR-39** Markdown body. `# <name>`, then `##` sections in spec order, then `## Brand Assets` last. Prose comes only from these templates:
-  - **Overview**: "Design tokens for <name>, measured from the computed styles of <url> on <date> by BrandChameleon <version>." Then "The page rendered in <light|dark> mode." (dark when the relative luminance of surface is below 0.2). Then any notes from FR-10, FR-13 (count of unreadable stylesheets), FR-19 and FR-21. Then "Brand personality is not inferred from CSS."
-  - **Colors**: one bullet per role: "**<Role> (<hex>):** <use summary>." The use summary counts sources, for example "Background of 12 buttons and text of 30 links". It adds "Declared as `--name`." when a custom property matches. A value set by hand says "Set during review."
-  - **Typography**: one bullet per level: "**<level>:** <family>, <size>, weight <weight>, from <n> `<tag>` [and <n> `<tag>`] elements. Full stack: <stack>." It lists up to 3 source tags.
-  - **Layout**: "Spacing values are the most common paddings and gaps on buttons, inputs, navigation links, cards and flex or grid containers:" then one bullet per token.
-  - **Elevation & Depth**: up to 3 most common distinct `box-shadow` values, each with count and element type. Omitted when none exist.
-  - **Shapes**: one bullet per `rounded` token with use counts.
+- **FR-39** Markdown body. `# <name>`, then `##` sections in spec order, then `## Brand Assets` last. The body describes the design, not the scan: no tool name, source URL, scan date, usage counts or scan notes (CR-2; FR-42 shows scan notes in the sidebar). Prose comes only from these templates:
+  - **Overview**: a factual look and feel from the written tokens, in this order, each part only when its tokens exist: "<Light|Dark> theme with <name> (<surface>) pages and <name> (<on-surface>) text." (dark when the relative luminance of surface is below 0.2). "The primary color is <name> (<hex>), with <name> (<hex>) [and <name> (<hex>)] as an accent|accents." (secondary and tertiary), or "The palette is monochrome. The primary color is <name> (<hex>)." "Headings use <family> and body text uses <family>." (or "Headings and body text use <family>."). "Corners are <px> on <kind> [, ...] and fully rounded on <kind>." (the most used element kind per `rounded` token).
+  - **Colors**: one bullet per role: "**<Role> (<hex>):** <role description>. Used for <uses>." The role descriptions are "Main brand color", "Secondary brand color", "Tertiary brand color", "Neutral color", "Page background", "Main text color" and "Text color on primary backgrounds". Uses are the named use types of FR-18 (button backgrounds, button borders, link text, large background areas, navigation backgrounds, navigation icons, heading text, button text), sorted by weight, with no counts. "Used for" is left out when there is no named use, for a value set by hand and for on-primary.
+  - **Typography**: one bullet per level: "**<level>:** <family>, <size>, weight <weight>. Used on `<tag>` [and `<tag>`] elements. Full stack: <stack>." It lists up to 3 source tags.
+  - **Layout**: "Spacing scale for padding and gaps in buttons, inputs, navigation links, cards and layouts:" then "- **<name>:** <px>" per token.
+  - **Elevation & Depth**: up to 3 most common distinct `box-shadow` values, each with the element kinds that use it (no counts). Omitted when none exist.
+  - **Shapes**: "- **<name> (<px>):** Used on <kinds>." per `rounded` token, kinds from most to least used.
   - **Components**: one bullet per component with its values, borders and non-uniform padding.
   - **Do's and Don'ts**: from these rules only:
     - `button-primary` exists: "Do use primary (<hex>) for primary button backgrounds."
@@ -298,10 +300,10 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 
 ### 8.5 Review UI
 
-- **FR-42** The Source block shows the hostname, the full URL in a `title` attribute and the scan time.
+- **FR-42** The Source block shows the hostname, the full URL in a `title` attribute and the scan time. Under "Scan notes" it lists, when they apply: "The page has more elements than the scan limit. Some elements were not read." (FR-10), "<n> stylesheet(s) from other sites could not be read. Its|Their custom property names are not used." (FR-13) and "The page sets no background color. Surface is set to white, the browser default." (FR-19). These notes are not in the file (CR-2).
 - **FR-43** Editing the name updates the file name preview and the markdown. An empty name disables Download with "Enter a name."
 - **FR-44** A color role accepts a candidate or a valid hex. Invalid hex does not change the model. Primary cannot be "None". Empty primary disables Download with "Choose a primary color."
-- **FR-45** Unchecking a typography level removes it. Editing a font family changes only that level. Unchecking a group removes its tokens and section, adds it to `omitted` with "Excluded during review" and changes affected component references to literal values. A typography reference with no literal form is removed.
+- **FR-45** Unchecking a typography level removes it. Editing a font family changes only that level. Unchecking a group removes its tokens and section, adds it to `omitted` with "Not part of this design system" and changes affected component references to literal values. A typography reference with no literal form is removed.
 - **FR-46** Changing any field regenerates the markdown. If the markdown has text edits, the Regenerate dialog shows first. Cancel keeps the text and restores the field's previous value.
 - **FR-47** Download runs basic checks on the markdown text: the first line is `---`, a closing `---` line exists and a `name:` line with a non-empty value exists in the front matter. On failure, the Raw check dialog lists the failures. "Download anyway" continues.
 - **FR-48** Download (or "Download anyway" in the Raw check dialog) does these steps in the sidebar, in this order, synchronously inside the click handler:
@@ -340,7 +342,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 | No colors on buttons or links | Monochrome rule, FR-21. |
 | No color at all | Primary empty. Download disabled until you set it. |
 | No `h1`, `h2` or `h3` | Those levels are not written. |
-| No typography source at all | `typography` in `omitted` with "Not detected on the scanned page". |
+| No typography source at all | `typography` in `omitted` with "No typography levels defined". |
 | Cross-origin stylesheets | Skipped, counted and reported in Overview. |
 | Framework variables not used (for example Bootstrap `--bs-primary`) | Ignored for primary, because the name hint needs interactive use. |
 | Cookie banner or chat widget | Skipped by FR-09. |
@@ -405,7 +407,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-20** Logo candidates follow FR-32 order. `data:` and inline SVG are skipped. Relative URLs are absolute. Duplicates are removed.
 - **AC-21** UI: a name edit updates the preview. An empty name disables Download with its reason.
 - **AC-22** UI: choosing a candidate or a valid hex updates the markdown. Invalid hex shows the error and does not change the markdown.
-- **AC-23** UI: unchecking a group removes its section, adds the `omitted` reason "Excluded during review" and leaves no broken reference (linter 0 errors).
+- **AC-23** UI: unchecking a group removes its section, adds the `omitted` reason "Not part of this design system" and leaves no broken reference (linter 0 errors).
 - **AC-24** UI: after a text edit, a field change opens the Regenerate dialog. Cancel keeps the text and restores the field. Continue regenerates.
 - **AC-25** UI: Download writes a request at `download:<windowId>` with the FR-31 name, the textarea text and a new `requestId`, in the same storage call as the clean review. Background (unit test): a new request calls `downloads.download()` with a `blob:` URL made in the background whose content equals the text, the file name, `conflictAction: "uniquify"` and `saveAs: false`, then removes the request and revokes the URL after 60 s.
 - **AC-26** UI: text without front matter opens the Raw check dialog. "Download anyway" downloads.
@@ -416,13 +418,15 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-31** At 280 px width, no state has horizontal scroll.
 - **AC-32** Fixture `large` (5,000+ elements): scan plus analysis under 3 s. Stored state under 1 MB.
 - **AC-33** Static test: source has no `fetch`, `XMLHttpRequest`, `WebSocket`, `eval`, `new Function`, `innerHTML` or `insertAdjacentHTML`.
-- **AC-34** A title of `Evil"\nname: x` gives YAML that parses with exactly one `name` key. Font families with markdown or control characters are sanitized. URL query and fragment are absent.
+- **AC-34** A title of `Evil"\nname: x` gives YAML that parses with exactly one `name` key. Font families with markdown or control characters are sanitized. The file does not contain the scanned URL, its query or its fragment.
 - **AC-35** Same input and fixed clock give byte-identical output.
 - **AC-36** `npm run build` makes a zip in `web-ext-artifacts/`. It contains `manifest.json` and no `tests/` or `node_modules/`.
 - **AC-37** PNG icons are exactly 48, 96 and 128 px. Screenshots are exactly 1280 x 800. The summary is 250 characters or fewer. `PRIVACY.md` and an MIT `LICENSE` exist.
 - **AC-38** `README.md` covers install, use, development, tests, build and AMO submission. The manual checklist exists.
 - **AC-39** The CI workflow runs lint and tests on pull requests.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
+- **AC-42** The file has no tool name, version, scan date, source URL, usage counts or scan notes. The description and Overview follow FR-35 and FR-39. The sidebar shows the FR-42 scan notes and "(not verified)" on the favicon guess (unit and sidebar tests, brand-basic snapshot).
+- **AC-43** A page whose only colored link text is the browser default `#0000EE` and whose header background is `#003B95` gets primary `#003B95`, and `#0000EE` is in no role and not in the palette (FR-21, unit test).
 - **AC-41** UI: Download (mouse or keyboard) and "Download anyway" make the storage call of FR-48, then call `sidebarAction.close()` while the click is still handled. The test mock rejects `close()` outside user input, like Firefox. Cancel in the Raw check dialog makes neither call.
 
 ## 12. Testing Requirements
@@ -526,3 +530,17 @@ None.
 - **Changed:** FR-02, FR-48, section 7.5, section 9, section 10, AC-25, new AC-41, deferred item "Silent overwrite", risks R1 and R5, `PRIVACY.md`, `amo/listing.md`, `README.md` and the manual checklist.
 - **Side effect:** Firefox's "ask where to save files" setting no longer shows a Save dialog for this file (FR-48).
 - **Fix 1 (owner test, 2026-09-24):** the sidebar closed, but every download failed. Cause: the sidebar made the `blob:` URL, and closing the sidebar revoked it before Firefox read it (section 10). My earlier reading of the 5 s keep-alive was wrong. Now the sidebar hands the text to the background script through `storage.session`, and the background makes the URL and calls `downloads.download()` (FR-48).
+
+### CR-2: A clean DESIGN.md without scan details (2026-09-24)
+
+- **Request (owner):** the file must read as a standard DESIGN.md. It must not say that the add-on extracted it.
+- **Explained first:** the YAML block is the spec's machine-readable token layer, and the body is the human-readable layer. Both stay. The scan details (tool, URL, date, counts, notes) helped a reviewer trace each value. They do not help an agent that makes HTML or slides.
+- **Owner decisions:**
+  - Remove the tool name, version, source URL, scan date, usage counts and scan notes from the file. Keep where each value is used and the full font stack.
+  - Write a factual look-and-feel Overview and description.
+  - Show the scan notes and the unverified favicon in the sidebar.
+  - Fix primary: the browser default link blue (`#0000EE`) was chosen for Booking.com over its dark-blue header (`#003B95`).
+- **Implementer additions:**
+  - Ignoring the default blue alone made primary the near-black link color. FR-21 step 3 (colored header or navigation) gives the expected `#003B95`.
+  - As an "other" use, the default blue then became tertiary. Link text in a default link color now stays out of the palette.
+- **Changed:** FR-21, FR-32, FR-35, FR-36, FR-39, FR-42, AC-34, new AC-42 and AC-43. Custom property names ("Declared as `--brand-primary`") are no longer in the Colors prose. They still help choose primary (FR-21 step 1).

@@ -271,7 +271,7 @@ test("shadows count on every element kind", () => {
     CONTEXT,
   );
   assert.equal(model.shadows[0].kinds[0].kind, "input");
-  assert.ok(generate(model, initialEdits(model)).includes("on 1 input."));
+  assert.ok(generate(model, initialEdits(model)).includes("` on inputs."));
 });
 
 test("an unusable header image falls back to the home-link image", () => {
@@ -303,4 +303,27 @@ test("analysis is deterministic (AC-35)", () => {
     records: [text("rgb(0, 0, 0)"), button("rgb(99, 91, 255)", "rgb(255, 255, 255)"), link("rgb(0, 212, 255)")],
   });
   assert.deepEqual(analyze(input, CONTEXT), analyze(structuredClone(input), CONTEXT));
+});
+
+test("FR-21 the browser's default link blue is not chosen as primary", () => {
+  const model = analyze(
+    scan({
+      backgrounds: { body: "rgb(255, 255, 255)" },
+      records: [
+        text("rgb(26, 26, 26)", { count: 20 }),
+        link("rgb(0, 0, 238)"),
+        link("rgb(26, 26, 26)", { count: 30 }),
+        record({ kind: "nav", tag: "header", bg: "rgb(0, 59, 149)", color: "rgb(255, 255, 255)" }),
+      ],
+    }),
+    CONTEXT,
+  );
+  const hexOf = (role) => model.candidates.find((c) => c.id === model.roles[role])?.hex;
+  assert.equal(hexOf("primary"), "#003B95");
+  assert.ok(!model.candidates.some((c) => c.hex === "#0000EE"), "default link blue is not in the palette");
+  assert.ok(!["secondary", "tertiary", "neutral"].some((role) => hexOf(role) === "#0000EE"));
+
+  // A page with only unstyled links has no brand color: you choose primary in review.
+  const plain = analyze(scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 238)")] }), CONTEXT);
+  assert.equal(plain.roles.primary, null);
 });

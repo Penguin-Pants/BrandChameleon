@@ -94,7 +94,7 @@ test("AC-22 color role edits and hex validation", async ({ page }) => {
 
   await page.fill("#hex-tertiary", "#ff8800");
   expect(await markdown(page)).toContain('tertiary: "#FF8800"');
-  expect(await markdown(page)).toContain("- **Tertiary (#FF8800):** Set during review.");
+  expect(await markdown(page)).toContain("- **Tertiary (#FF8800):** Tertiary brand color.\n");
   await expect(page.locator("#role-tertiary")).toHaveValue("custom");
 
   await page.fill("#hex-tertiary", "#FFFFFF00");
@@ -112,7 +112,7 @@ test("AC-23 unchecking a group removes it and records the omission", async ({ pa
   const text = await markdown(page);
   expect(text).not.toContain("\nrounded:");
   expect(text).not.toContain("## Shapes");
-  expect(text).toContain('  - section: rounded\n    reason: "Excluded during review"');
+  expect(text).toContain('  - section: rounded\n    reason: "Not part of this design system"');
   expect(text).toContain('rounded: "8px"');
   expect(text).not.toContain("{rounded.");
 });
@@ -200,6 +200,26 @@ test("AC-41 Cancel in the raw check keeps the sidebar open", async ({ page }) =>
   expect(await calls(page)).toEqual([]);
   expect(await stored(page, "download:1")).toBeUndefined();
   expect((await stored(page, "review:1")).dirty).toBe(true);
+});
+
+test("CR-2 scan notes and unverified logos show in the sidebar, not in the file", async ({ page }) => {
+  const noted = structuredClone(model);
+  noted.notes = { capped: true, unreadableStylesheets: 2, surfaceAssumed: false };
+  await openSidebar(page, { "scan:1": done("n1", noted) });
+  await expect(page.locator("#scan-notes li")).toHaveText([
+    "The page has more elements than the scan limit. Some elements were not read.",
+    "2 stylesheets from other sites could not be read. Their custom property names are not used.",
+  ]);
+  await expect(page.locator(".logo-label", { hasText: "Site favicon" })).toHaveText("Site favicon (not verified)");
+  const text = await markdown(page);
+  expect(text).not.toContain("could not be read");
+  expect(text).not.toContain("not verified");
+});
+
+test("CR-2 no scan notes block when the scan is complete", async ({ page }) => {
+  await openSidebar(page, { "scan:1": done() });
+  await expect(page.locator("#view-review")).toBeVisible();
+  await expect(page.locator("#scan-notes")).toHaveCount(0);
 });
 
 test("AC-27 a new scan asks before replacing a dirty review", async ({ page }) => {

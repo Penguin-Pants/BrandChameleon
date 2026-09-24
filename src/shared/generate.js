@@ -1,14 +1,13 @@
 // Builds the DESIGN.md text from a model and review edits (FR-33 to FR-41).
 // Pure and deterministic: the same inputs give byte-identical output.
-import { contrastRatio, isOpaque, oklchChroma, relativeLuminance } from "./color.js";
-import { DARK_SURFACE_LUMINANCE, NEUTRAL_CHROMA, ROLE_ORDER, TYPE_LEVELS, WCAG_AA } from "./constants.js";
+import { colorName, contrastRatio, isOpaque, oklchChroma, relativeLuminance } from "./color.js";
+import { DARK_SURFACE_LUMINANCE, NEUTRAL_CHROMA, ROLE_ORDER, TYPE_LEVELS, USE_WEIGHTS, WCAG_AA } from "./constants.js";
 import { roleHex } from "./review.js";
 import { cleanFontFamily, cleanName } from "./sanitize.js";
 
 const q = (value) => JSON.stringify(String(value));
 const fmt = (value) => String(Math.round(value * 1000) / 1000);
 const px = (value) => `${fmt(value)}px`;
-const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const ratio = (value) => `${value.toFixed(2)}:1`;
 
 function joinList(items) {
@@ -26,43 +25,65 @@ const ROLE_LABELS = {
   "on-primary": "On-primary",
 };
 
+// The file describes the design, not the scan: no counts, sources or tool
+// notes (change request CR-2). Scan notes show in the sidebar instead.
+const ROLE_DESCRIPTIONS = {
+  primary: "Main brand color",
+  secondary: "Secondary brand color",
+  tertiary: "Tertiary brand color",
+  neutral: "Neutral color",
+  surface: "Page background",
+  "on-surface": "Main text color",
+  "on-primary": "Text color on primary backgrounds",
+};
+
 const USE_PHRASES = [
-  ["buttonBg", (n) => `background of ${plural(n, "button")}`],
-  ["buttonBorder", (n) => `border of ${plural(n, "button")}`],
-  ["linkText", (n) => `text of ${plural(n, "link")}`],
-  ["largeBg", (n) => `background of ${plural(n, "large area")}`],
-  ["navBg", (n) => `background of ${plural(n, "navigation area")}`],
-  ["navSvg", (n) => `fill or stroke of ${plural(n, "navigation icon shape")}`],
-  ["headingText", (n) => `text of ${plural(n, "heading")}`],
-  ["buttonText", (n) => `text of ${plural(n, "button")}`],
-  ["other", (n) => plural(n, "other use")],
+  ["buttonBg", "button backgrounds"],
+  ["buttonBorder", "button borders"],
+  ["linkText", "link text"],
+  ["largeBg", "large background areas"],
+  ["navBg", "navigation backgrounds"],
+  ["navSvg", "navigation icons"],
+  ["headingText", "heading text"],
+  ["buttonText", "button text"],
 ];
 
-const KIND_WORDS = {
-  button: "button",
-  input: "input",
-  card: "card",
-  img: "image",
-  nav: "navigation area",
-  link: "link",
-  heading: "heading",
-  other: "other element",
+const KIND_PLURALS = {
+  button: "buttons",
+  input: "inputs",
+  card: "cards",
+  img: "images",
+  nav: "navigation areas",
+  link: "links",
+  heading: "headings",
+  other: "page elements",
 };
 
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function useSummary(candidate) {
-  if (!candidate) return "Set during review.";
-  const parts = USE_PHRASES.filter(([key]) => candidate.uses[key]).map(([key, phrase]) => phrase(candidate.uses[key]));
-  let text = parts.length ? `${capitalize(joinList(parts))}.` : "Not used on visible elements.";
-  if (candidate.synthetic) text = "Browser default.";
-  if (candidate.customProps.length) {
-    text += ` Declared as ${joinList(candidate.customProps.map((name) => `\`${name}\``))}.`;
-  }
-  return text;
+/** Kinds from most to least used, as plural words. */
+function kindList(counts) {
+  return joinList(
+    Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([kind]) => KIND_PLURALS[kind] ?? kind),
+  );
 }
+
+function colorProse(role, candidate) {
+  const text = `${ROLE_DESCRIPTIONS[role]}.`;
+  // on-primary often shares the white or black cluster of other roles, so the
+  // cluster's other uses would describe a different role.
+  if (!candidate || candidate.synthetic || role === "on-primary") return text;
+  const uses = USE_PHRASES.filter(([key]) => candidate.uses[key])
+    .sort((a, b) => candidate.uses[b[0]] * USE_WEIGHTS[b[0]] - candidate.uses[a[0]] * USE_WEIGHTS[a[0]])
+    .map(([, phrase]) => phrase);
+  return uses.length ? `${text} Used for ${joinList(uses)}.` : text;
+}
+
+const named = (hex) => `${colorName(hex)} (${hex})`;
 
 // Token resolution --------------------------------------------------------
 
@@ -210,15 +231,27 @@ function buildComponents(model, edits, ctx) {
 
 // Output -----------------------------------------------------------------
 
+const OMITTED_REASONS = {
+  typography: "No typography levels defined",
+  rounded: "No rounded corners defined",
+  spacing: "No spacing scale defined",
+  components: "No components defined",
+};
+
+function themeOf(model, ctx) {
+  const surfaceHex = ctx.colors.surface ?? model.candidates.find((c) => c.id === model.roles.surface)?.hex ?? "#FFFFFF";
+  return relativeLuminance(surfaceHex) < DARK_SURFACE_LUMINANCE ? "dark" : "light";
+}
+
 function frontMatter(model, edits, ctx, components) {
   const name = cleanName(edits.name) || "Untitled";
-  const date = model.source.scannedAt.slice(0, 10);
-  const url = model.source.url || "the scanned page";
+  const theme = capitalize(themeOf(model, ctx));
+  const { primary } = ctx.colors;
   const lines = [
     "---",
     "version: alpha",
     `name: ${q(name)}`,
-    `description: ${q(`Design tokens extracted from ${url} on ${date} by BrandChameleon ${model.source.extVersion}.`)}`,
+    `description: ${q(primary ? `${theme} theme with ${named(primary)} as the primary color.` : `${theme} theme.`)}`,
   ];
 
   const present = {
@@ -237,7 +270,7 @@ function frontMatter(model, edits, ctx, components) {
           ? model.rounded.scale.length > 0 || Boolean(model.rounded.full)
           : model.spacing.length > 0;
       lines.push(`  - section: ${group}`);
-      lines.push(`    reason: ${q(detected ? "Excluded during review" : "Not detected on the scanned page")}`);
+      lines.push(`    reason: ${q(detected ? "Not part of this design system" : OMITTED_REASONS[group])}`);
     }
   }
 
@@ -281,14 +314,6 @@ function frontMatter(model, edits, ctx, components) {
   return lines;
 }
 
-function usesProse(uses) {
-  return joinList(
-    Object.entries(uses)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([kind, count]) => plural(count, KIND_WORDS[kind] ?? kind)),
-  );
-}
-
 function body(model, edits, ctx, components) {
   const name = cleanName(edits.name) || "Untitled";
   const out = [`# ${name}`, ""];
@@ -297,25 +322,41 @@ function body(model, edits, ctx, components) {
     out.push(`## ${title}`, "", ...lines, "");
   };
 
-  // Overview
-  const surfaceHex = ctx.colors.surface ?? model.candidates.find((c) => c.id === model.roles.surface)?.hex ?? "#FFFFFF";
-  const mode = relativeLuminance(surfaceHex) < DARK_SURFACE_LUMINANCE ? "dark" : "light";
-  const source = model.source.url || "the scanned page";
-  const date = model.source.scannedAt.slice(0, 10);
+  // Overview: a factual look and feel, from the tokens only.
+  const { primary: primaryHex, secondary, tertiary, surface: surfaceHex } = ctx.colors;
+  const textHex = ctx.colors["on-surface"];
   const overview = [
-    `Design tokens for ${name}, measured from the computed styles of ${source} on ${date} by BrandChameleon ${model.source.extVersion}.`,
-    `The page rendered in ${mode} mode.`,
+    `${capitalize(themeOf(model, ctx))} theme` +
+      (surfaceHex ? ` with ${named(surfaceHex)} pages` + (textHex ? ` and ${named(textHex)} text` : "") : "") +
+      ".",
   ];
-  if (model.notes.capped) overview.push("The scan reached its element limit. Some elements were not read.");
-  if (model.notes.unreadableStylesheets > 0) {
-    const n = model.notes.unreadableStylesheets;
-    overview.push(`${plural(n, "stylesheet")} could not be read, so ${n === 1 ? "its" : "their"} custom properties are not included.`);
+  if (primaryHex && oklchChroma(primaryHex) < NEUTRAL_CHROMA) {
+    overview.push(`The palette is monochrome. The primary color is ${named(primaryHex)}.`);
+  } else if (primaryHex) {
+    const accents = [secondary, tertiary].filter(Boolean).map(named);
+    overview.push(
+      `The primary color is ${named(primaryHex)}` +
+        (accents.length ? `, with ${joinList(accents)} as ${accents.length === 1 ? "an accent" : "accents"}.` : "."),
+    );
   }
-  if (model.notes.surfaceAssumed) overview.push("The page sets no background color. Browser default white is assumed.");
-  if (ctx.colors.primary && oklchChroma(ctx.colors.primary) < NEUTRAL_CHROMA) {
-    overview.push("The brand palette is monochrome. No saturated color is used on buttons or links.");
+  const headlineLevel = ["headline-lg", "headline-md", "headline-sm"].map((l) => ctx.levels[l]).find((l) => l?.family);
+  const bodyFamily = ctx.levels["body-md"]?.family;
+  if (headlineLevel && bodyFamily) {
+    overview.push(
+      headlineLevel.family === bodyFamily
+        ? `Headings and body text use ${bodyFamily}.`
+        : `Headings use ${headlineLevel.family} and body text uses ${bodyFamily}.`,
+    );
+  } else if (headlineLevel || bodyFamily) {
+    overview.push(headlineLevel ? `Headings use ${headlineLevel.family}.` : `Body text uses ${bodyFamily}.`);
   }
-  overview.push("Brand personality is not inferred from CSS.");
+  const corners = ctx.rounded
+    .filter((token) => Object.keys(token.uses ?? {}).length)
+    .map((token) => {
+      const [kind] = Object.entries(token.uses).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+      return `${token.full ? "fully rounded" : px(token.px)} on ${KIND_PLURALS[kind] ?? kind}`;
+    });
+  if (corners.length) overview.push(`Corners are ${joinList(corners)}.`);
   section("Overview", [overview.join(" ")]);
 
   // Colors
@@ -324,7 +365,7 @@ function body(model, edits, ctx, components) {
     Object.keys(ctx.colors).map((role) => {
       const edit = edits.roles[role];
       const source = edit?.hex ? null : ctx.candidate(edit?.candidate);
-      return `- **${ROLE_LABELS[role]} (${ctx.colors[role]}):** ${useSummary(source)}`;
+      return `- **${ROLE_LABELS[role]} (${ctx.colors[role]}):** ${colorProse(role, source)}`;
     }),
   );
 
@@ -333,17 +374,17 @@ function body(model, edits, ctx, components) {
     "Typography",
     Object.entries(ctx.levels).map(([level, value]) => {
       const family = value.family || "Unnamed font";
-      const sources = joinList(value.tags.map((t) => `${t.count} \`${t.tag}\``));
-      return `- **${level}:** ${family}, ${px(value.fontSize)}, weight ${value.fontWeight}, from ${sources} ${value.count === 1 ? "element" : "elements"}. Full stack: ${value.stack || family}.`;
+      const tags = joinList(value.tags.map((t) => `\`${t.tag}\``));
+      return `- **${level}:** ${family}, ${px(value.fontSize)}, weight ${value.fontWeight}. Used on ${tags} elements. Full stack: ${value.stack || family}.`;
     }),
   );
 
   // Layout
   if (ctx.spacing.length) {
     section("Layout", [
-      "Spacing values are the most common paddings and gaps on buttons, inputs, navigation links, cards and flex or grid containers:",
+      "Spacing scale for padding and gaps in buttons, inputs, navigation links, cards and layouts:",
       "",
-      ...ctx.spacing.map((token) => `- **${token.name}:** ${px(token.px)}, used ${plural(token.count, "time")}.`),
+      ...ctx.spacing.map((token) => `- **${token.name}:** ${px(token.px)}`),
     ]);
   }
 
@@ -351,14 +392,18 @@ function body(model, edits, ctx, components) {
   section(
     "Elevation & Depth",
     model.shadows.map(
-      (shadow) => `- \`${shadow.value}\` on ${joinList(shadow.kinds.map((k) => plural(k.count, KIND_WORDS[k.kind] ?? k.kind)))}.`,
+      (shadow) => `- \`${shadow.value}\` on ${kindList(Object.fromEntries(shadow.kinds.map((k) => [k.kind, k.count])))}.`,
     ),
   );
 
   // Shapes
   section(
     "Shapes",
-    ctx.rounded.map((token) => `- **${token.name} (${px(token.px)}):** ${usesProse(token.uses)}.`),
+    ctx.rounded.map((token) =>
+      Object.keys(token.uses ?? {}).length
+        ? `- **${token.name} (${px(token.px)}):** Used on ${kindList(token.uses)}.`
+        : `- **${token.name} (${px(token.px)})**`,
+    ),
   );
 
   // Components
