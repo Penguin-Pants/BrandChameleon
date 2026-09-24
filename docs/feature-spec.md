@@ -186,7 +186,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   - Heading: `h1` to `h6`.
   - Input: text-like `input`, `select`, `textarea`.
   - Card: not one of the above, area at least 2,500 px² and one of these: a non-transparent background that differs from its parent's, a visible border or a box shadow.
-- **FR-12** For each element the scan records the computed values it needs: `color`, `background-color`, border top width, style and color, `border-top-left-radius`, the four paddings, `row-gap`, `column-gap`, `box-shadow`, `font-family`, `font-size`, `font-weight`, `line-height`, `letter-spacing`, bounding box size, direct text length and, for SVG shapes inside Nav, `fill` and `stroke`. Direct text length is the sum of the trimmed lengths of the element's own child text nodes.
+- **FR-12** For each element the scan records the computed values it needs: `color`, `background-color`, border top width, style and color, `border-top-left-radius`, the four paddings, `row-gap`, `column-gap`, `box-shadow`, `font-family`, `font-size`, `font-weight`, `line-height`, `letter-spacing`, bounding box size, direct text length and, for SVG shapes inside Nav, `fill` and `stroke`. Direct text length is the sum of the trimmed lengths of the element's own child text nodes. Records inside an `a[href]` carry `inLink: true`.
 - **FR-13** Custom properties: the scan reads rules with selector `:root` or `html` from stylesheets it can read. It resolves each `--*` name with `getComputedStyle(document.documentElement)`. It keeps values that parse as colors. Stylesheets that throw on `cssRules` are skipped and counted.
 
 ### 8.3 Analysis
@@ -217,7 +217,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
   3. Else the chromatic cluster with the highest total weight among clusters with Nav background or Nav SVG uses is primary (a colored header is brand evidence, CR-2).
   4. Else (monochrome) primary is the cluster with the highest Button background weight, excluding `surface`. Else the cluster with the highest Link text weight. Else the chromatic cluster with the highest total weight. Else primary is empty.
   5. When primary is neutral, the Overview says "The palette is monochrome." (FR-39).
-  On an `a` element, a text or border color that is a browser default link color does not enter the palette, because unstyled links show it (CR-2, CR-3). The defaults are `#0000EE` (Firefox and Chrome), `#00CADB` (Firefox on dark pages) and `#551A8B` (visited). This covers links styled as buttons or tiles and `currentColor` borders. A page whose only color is such link text gets an empty primary, and review asks you to choose one (FR-44).
+  On an `a` element or on content inside one (FR-12 `inLink`), a text, border or icon fill color that is a browser default link color does not enter the palette, because unstyled links show it and their content inherits it (CR-2, CR-3). The defaults are `#0000EE` (Firefox and Chrome), `#00CADB` (Firefox on dark pages) and `#551A8B` (visited). This covers links styled as buttons or tiles and `currentColor` borders. A page whose only color is such link text gets an empty primary, and review asks you to choose one (FR-44).
 - **FR-22** `on-primary` is the most common text color cluster on buttons whose background cluster is primary. It is absent when no such button exists.
 - **FR-23** `secondary` is the chromatic cluster with the highest total weight that is at least OKLab distance 0.08 from primary and has at least 10% of primary's total weight. `tertiary` uses the same rule and is also at least 0.08 from secondary.
 - **FR-24** `neutral` is the neutral cluster with the highest total weight that is at least OKLab distance 0.05 from `surface` and `on-surface`.
@@ -428,7 +428,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
 - **AC-42** The file has no tool name, version, scan date, source URL, usage counts or scan notes. The description and Overview follow FR-35 and FR-39. The sidebar shows the FR-42 scan notes and "(not verified)" on the favicon guess (unit and sidebar tests, brand-basic snapshot).
 - **AC-43** A page whose only colored link text is the browser default `#0000EE` and whose header background is `#003B95` gets primary `#003B95`, and `#0000EE` is in no role and not in the palette (FR-21, unit test).
-- **AC-44** Links styled as buttons in the default blue, including a `currentColor` border, add no color (unit test). A 110px filled link is a card, and a bordered link in the default blue reports `rgb(0, 0, 238)` in the browser (`classify` fixture). A system font stack is written as `system-ui` (unit test). Corner values on the same kind are grouped in the Overview (unit test).
+- **AC-44** Links styled as buttons in the default blue, including a `currentColor` border, add no color. Text and icons inside a link that inherit the default blue add no color either (unit test and `classify` fixture). A 110px filled link is a card, and a bordered link in the default blue reports `rgb(0, 0, 238)` in the browser (`classify` fixture). A system font stack is written as `system-ui` (unit test). Corner values on the same kind are grouped in the Overview (unit test).
 - **AC-41** UI: Download (mouse or keyboard) and "Download anyway" make the storage call of FR-48, then call `sidebarAction.close()` while the click is still handled. The test mock rejects `close()` outside user input, like Firefox. Cancel in the Raw check dialog makes neither call.
 
 ## 12. Testing Requirements
@@ -554,5 +554,6 @@ None.
   2. The Overview said "4px on buttons, 8px on buttons and fully rounded on buttons". Values that share a kind are now joined (FR-39).
   3. `button-primary` was 110px tall: a large filled link (tile) counted as a button. Styled links taller than 64px are now cards (FR-11).
   4. Body fonts were written as "BlinkMacSystemFont", which works only in Chrome and Safari on macOS. System font stacks are now written as `system-ui` (FR-26).
+- **Fix 1b (owner's third file, 2026-09-24):** secondary was still `#0000EE`, with no named use. Cause: text inside a link (for example a `div` or `span` in an `a`) inherits the default blue, and fix 1 covered the `a` element only. The collector now marks link content `inLink`, and the rule covers its text, borders and nav icon fills (FR-12, FR-21). Reproduced in Chromium before the fix.
 - **Implementer addition:** Firefox's default link color on dark pages (`#00CADB`, pref `browser.anchor_color.dark`) is also excluded. Source: `StaticPrefList.yaml` in Firefox `main`, read on 2026-09-24.
 - **Changed:** FR-11, FR-21, FR-26, FR-39 and new AC-44.

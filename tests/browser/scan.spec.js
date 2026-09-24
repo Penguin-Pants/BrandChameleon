@@ -182,16 +182,23 @@ test("AC-20 logo candidates follow FR-32 order", async ({ page, baseURL }) => {
 });
 
 test("FR-11 links with the parent background are links, filled links are buttons", async ({ page }) => {
-  const { scan } = await analyzeFixture(page, "classify");
+  const { scan, model } = await analyzeFixture(page, "classify");
   const anchors = scan.records.filter((r) => r.tag === "a");
   // The last link sits under a visibility:hidden parent that paints no background,
   // so its fill differs from the white page and it is a button.
-  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button", "button", "card"]);
+  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button", "button", "card", "link", "link"]);
   // The browser default link color is exactly the value the analysis ignores (FR-21).
   const defaultBlue = anchors[3];
   expect([defaultBlue.color, defaultBlue.border[2]]).toEqual(["rgb(0, 0, 238)", "rgb(0, 0, 238)"]);
   // A 110px filled link is a tile (card), not a button (FR-11).
   expect(anchors[4].height).toBeNull();
+  // Content inside a link inherits the default blue: a div's text and an icon's
+  // currentColor fill. Both are marked inLink and stay out of the palette (FR-21).
+  const inner = scan.records.find((r) => r.tag === "div" && r.inLink);
+  expect(inner.color).toBe("rgb(0, 0, 238)");
+  const icon = scan.records.find((r) => r.kind === "svg");
+  expect(icon).toMatchObject({ inLink: true, fill: "rgb(0, 0, 238)" });
+  expect(model.candidates.map((c) => c.hex)).not.toContain("#0000EE");
   // A transparent border is not a visible border: that link merges into the link record.
   expect(anchors[0].count).toBe(2);
   // An elliptical corner is neither a radius value nor "full".

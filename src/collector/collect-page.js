@@ -113,7 +113,7 @@ export async function collectPage(options) {
     }
     return null;
   };
-  pushChildren(document, { parentBg: null, inNav: false, inHomeLink: false });
+  pushChildren(document, { parentBg: null, inNav: false, inHomeLink: false, inLink: false });
 
   for (;;) {
     const entry = nextEntry();
@@ -122,7 +122,7 @@ export async function collectPage(options) {
       capped = true;
       break;
     }
-    const { el, parentBg, inNav, inHomeLink } = entry;
+    const { el, parentBg, inNav, inHomeLink, inLink } = entry;
     visited += 1;
     try {
       const tag = el.localName.toLowerCase();
@@ -146,7 +146,8 @@ export async function collectPage(options) {
           isHomeLink = false;
         }
       }
-      const childContext = { parentBg: effectiveBg, inNav: inNav || isNav, inHomeLink: isHomeLink };
+      // inLink: content of a link inherits its color, including the browser default (FR-21).
+      const childContext = { parentBg: effectiveBg, inNav: inNav || isNav, inHomeLink: isHomeLink, inLink: inLink || Boolean(href) };
 
       const rect = el.getBoundingClientRect();
       const hidden = cs.visibility === "hidden" || cs.visibility === "collapse" || rect.width === 0 || rect.height === 0;
@@ -162,7 +163,7 @@ export async function collectPage(options) {
           visible += 1;
           const fill = cs.fill && cs.fill.startsWith("url(") ? null : cs.fill;
           const stroke = cs.stroke && cs.stroke.startsWith("url(") ? null : cs.stroke;
-          addRecord({ kind: "svg", tag, inNav: true, fill, stroke }, 0);
+          addRecord({ kind: "svg", tag, inNav: true, ...(inLink && { inLink }), fill, stroke }, 0);
         }
         pushChildren(el, childContext);
         continue;
@@ -231,6 +232,7 @@ export async function collectPage(options) {
         kind,
         tag,
         inNav,
+        ...(inLink && { inLink }),
         color: hasText || ["button", "link", "heading", "nav"].includes(kind) ? cs.color : null,
         bg,
         largeBg: Boolean(bg) && area >= viewportArea * 0.25,
