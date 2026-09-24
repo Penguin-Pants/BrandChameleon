@@ -10,9 +10,9 @@ const fmt = (value) => String(Math.round(value * 1000) / 1000);
 const px = (value) => `${fmt(value)}px`;
 const ratio = (value) => `${value.toFixed(2)}:1`;
 
-function joinList(items) {
+function joinList(items, conjunction = "and") {
   if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  return `${items.slice(0, -1).join(", ")} ${conjunction} ${items[items.length - 1]}`;
 }
 
 const ROLE_LABELS = {
@@ -350,12 +350,14 @@ function body(model, edits, ctx, components) {
   } else if (headlineLevel || bodyFamily) {
     overview.push(headlineLevel ? `Headings use ${headlineLevel.family}.` : `Body text uses ${bodyFamily}.`);
   }
-  const corners = ctx.rounded
-    .filter((token) => Object.keys(token.uses ?? {}).length)
-    .map((token) => {
-      const [kind] = Object.entries(token.uses).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
-      return `${token.full ? "fully rounded" : px(token.px)} on ${KIND_PLURALS[kind] ?? kind}`;
-    });
+  // Each corner value goes with the element kind that uses it most; values
+  // that share a kind are joined, for example "4px or 8px on buttons".
+  const cornersByKind = new Map();
+  for (const token of ctx.rounded.filter((t) => Object.keys(t.uses ?? {}).length)) {
+    const [kind] = Object.entries(token.uses).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    cornersByKind.set(kind, [...(cornersByKind.get(kind) ?? []), token.full ? "fully rounded" : px(token.px)]);
+  }
+  const corners = [...cornersByKind].map(([kind, values]) => `${joinList(values, "or")} on ${KIND_PLURALS[kind] ?? kind}`);
   if (corners.length) overview.push(`Corners are ${joinList(corners)}.`);
   section("Overview", [overview.join(" ")]);
 

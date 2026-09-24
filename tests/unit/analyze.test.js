@@ -343,3 +343,41 @@ test("FR-21 the browser's default link blue is not chosen as primary", () => {
   const plain = analyze(scan({ records: [text("rgb(0, 0, 0)"), link("rgb(0, 0, 238)")] }), CONTEXT);
   assert.equal(plain.roles.primary, null);
 });
+
+test("FR-21 links styled as buttons keep the default blue out of the palette", () => {
+  const model = analyze(
+    scan({
+      backgrounds: { body: "rgb(255, 255, 255)" },
+      records: [
+        text("rgb(26, 26, 26)", { textLen: 200 }),
+        record({ kind: "nav", tag: "header", bg: "rgb(0, 59, 149)" }),
+        record({
+          kind: "button",
+          tag: "a",
+          bg: "rgb(255, 255, 255)",
+          border: [1, "solid", "rgb(0, 0, 238)"],
+          color: "rgb(0, 0, 238)",
+          textLen: 10,
+          count: 4,
+        }),
+      ],
+    }),
+    CONTEXT,
+  );
+  assert.ok(!model.candidates.some((c) => c.hex === "#0000EE"), "text and currentColor border are both skipped");
+  const dark = analyze(scan({ records: [text("rgb(255, 255, 255)"), link("rgb(0, 202, 219)", { count: 5 })] }), CONTEXT);
+  assert.ok(!dark.candidates.some((c) => c.hex === "#00CADB"), "Firefox's dark-page link default is skipped too");
+  assert.equal(model.candidates.find((c) => c.id === model.roles.primary)?.hex, "#003B95");
+});
+
+test("FR-26 a system font stack is written as system-ui", () => {
+  const level = (stack, tag = "p") =>
+    analyze(scan({ records: [text("rgb(0, 0, 0)", { tag, textLen: 100, font: [stack, "14px", "400", "20px", "normal"] })] }), CONTEXT)
+      .typography["body-md"];
+  const system = level('BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif');
+  assert.equal(system.family, "system-ui");
+  assert.equal(system.stack, "BlinkMacSystemFont, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif");
+  assert.equal(level("-apple-system, sans-serif").family, "system-ui");
+  assert.equal(level("system-ui, sans-serif").family, "system-ui");
+  assert.equal(level('"Avenir Next", BlinkMacSystemFont, sans-serif').family, "Avenir Next");
+});

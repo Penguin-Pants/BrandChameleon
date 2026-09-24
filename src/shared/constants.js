@@ -24,9 +24,14 @@ export const USE_WEIGHTS = {
 
 export const INTERACTIVE_USES = new Set(["buttonBg", "buttonBorder", "linkText"]);
 
-// Firefox and Chrome paint unstyled links in these colors (link, visited).
-// They are not brand choices, so link text in them does not enter the palette.
-export const BROWSER_DEFAULT_LINK_COLORS = new Set(["#0000EE", "#551A8B"]);
+// Unstyled link colors: #0000EE in Firefox and Chrome, #00CADB in Firefox on
+// dark pages (browser.anchor_color and .dark prefs), #551A8B visited. They are
+// not brand choices, so link colors in them do not enter the palette.
+export const BROWSER_DEFAULT_LINK_COLORS = new Set(["#0000EE", "#00CADB", "#551A8B"]);
+
+// Names that only some browsers know for the operating system font. A stack
+// that starts with one is written as the standard keyword "system-ui" (FR-26).
+export const SYSTEM_FONT_ALIASES = new Set(["-apple-system", "blinkmacsystemfont", "system-ui"]);
 
 export const CLUSTER_DISTANCE = 0.03;
 export const NEUTRAL_CHROMA = 0.04;

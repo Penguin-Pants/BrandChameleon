@@ -186,7 +186,12 @@ test("FR-11 links with the parent background are links, filled links are buttons
   const anchors = scan.records.filter((r) => r.tag === "a");
   // The last link sits under a visibility:hidden parent that paints no background,
   // so its fill differs from the white page and it is a button.
-  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button"]);
+  expect(anchors.map((r) => r.kind)).toEqual(["link", "button", "button", "button", "card"]);
+  // The browser default link color is exactly the value the analysis ignores (FR-21).
+  const defaultBlue = anchors[3];
+  expect([defaultBlue.color, defaultBlue.border[2]]).toEqual(["rgb(0, 0, 238)", "rgb(0, 0, 238)"]);
+  // A 110px filled link is a tile (card), not a button (FR-11).
+  expect(anchors[4].height).toBeNull();
   // A transparent border is not a visible border: that link merges into the link record.
   expect(anchors[0].count).toBe(2);
   // An elliptical corner is neither a radius value nor "full".
