@@ -1,5 +1,6 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { resolveObjectURL } from "node:buffer";
 import { button, scan, text } from "../support/synthetic.js";
 
 // One mock `browser` for the module's lifetime; each test swaps behaviors.
@@ -8,8 +9,11 @@ const storage = {};
 const behavior = {
   executeScript: async () => [{ frameId: 0, result: validScan() }],
   tabsGet: async (id) => ({ id, url: "https://acme.example/" }),
+  download: async () => 1,
 };
+const downloads = [];
 let clickListener;
+let storageListener;
 
 globalThis.browser = {
   action: { onClicked: { addListener: (fn) => (clickListener = fn) } },
@@ -28,8 +32,20 @@ globalThis.browser = {
       return behavior.executeScript(details);
     },
   },
+  downloads: {
+    download: (options) => {
+      calls.push("download");
+      downloads.push(options);
+      return behavior.download(options);
+    },
+  },
   storage: {
+    onChanged: { addListener: (fn) => (storageListener = fn) },
     session: {
+      remove: async (key) => {
+        calls.push(`remove ${key}`);
+        delete storage[key];
+      },
       set: async (items) => {
         for (const [key, value] of Object.entries(items)) {
           calls.push(`set ${key} ${value.status}`);
@@ -53,7 +69,9 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 function reset() {
   calls.length = 0;
+  downloads.length = 0;
   for (const key of Object.keys(storage)) delete storage[key];
+  behavior.download = async () => 1;
   behavior.executeScript = async () => [{ frameId: 0, result: validScan() }];
   behavior.tabsGet = async (id) => ({ id, url: TAB.url });
 }
@@ -141,5 +159,55 @@ test("a scan that runs past 15 s stores the timeout error", async () => {
     assert.equal(storage["scan:3"].error, "timeout");
   } finally {
     mock.timers.reset();
+  }
+});
+
+const REQUEST = { requestId: "r1", filename: "acme_design.md", text: "---\nname: \"Acme\"\n---\n" };
+const readBlobUrl = (url) => resolveObjectURL(url)?.text();
+
+test("FR-48 a download request saves the file from a background blob URL", async () => {
+  reset();
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    storageListener({ "download:3": { newValue: REQUEST } }, "session");
+    await flush();
+    assert.equal(downloads.length, 1);
+    const [options] = downloads;
+    assert.deepEqual(
+      { filename: options.filename, conflictAction: options.conflictAction, saveAs: options.saveAs },
+      { filename: "acme_design.md", conflictAction: "uniquify", saveAs: false },
+    );
+    assert.match(options.url, /^blob:/);
+    assert.equal(await readBlobUrl(options.url), REQUEST.text);
+    assert.deepEqual(calls, ["download", "remove download:3"]);
+    mock.timers.tick(60000);
+    assert.equal(resolveObjectURL(options.url), undefined, "the URL is revoked after 60 s");
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test("FR-48 other areas, other keys and removals start no download", async () => {
+  reset();
+  storageListener({ "download:3": { newValue: REQUEST } }, "local");
+  storageListener({ "scan:3": { newValue: { status: "done" } } }, "session");
+  storageListener({ "download:3": { oldValue: REQUEST } }, "session");
+  await flush();
+  assert.deepEqual(calls, []);
+});
+
+test("FR-48 a failed download still clears the request", async () => {
+  reset();
+  behavior.download = async () => {
+    throw new Error("filename must not contain illegal characters");
+  };
+  const logged = mock.method(console, "error", () => {});
+  try {
+    storageListener({ "download:3": { newValue: REQUEST } }, "session");
+    await flush();
+    assert.deepEqual(calls, ["download", "remove download:3"]);
+    assert.equal(logged.mock.calls[0].arguments[0], "[BrandChameleon]");
+  } finally {
+    logged.mock.restore();
   }
 });

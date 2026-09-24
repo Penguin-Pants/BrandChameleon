@@ -37,6 +37,7 @@ const $ = (id) => document.getElementById(id);
 const state = { windowId: null, scan: null, review: null, bindings: [], timer: null, saveTimer: null };
 const scanKey = () => `scan:${state.windowId}`;
 const reviewKey = () => `review:${state.windowId}`;
+const downloadKey = () => `download:${state.windowId}`;
 
 // Persistence --------------------------------------------------------------
 
@@ -523,21 +524,18 @@ function download() {
 }
 
 // FR-48: Firefox allows sidebarAction.close() only while it handles the click,
-// so everything here runs synchronously in that click. The downloads API saves
-// the file in the parent process, so closing the sidebar cannot cancel it.
-// saveAs is false because a Save dialog needs the sidebar that is closing.
+// so everything here runs synchronously in that click. Closing revokes any
+// blob: URL made here, so the background script saves the file: one storage
+// write hands it over, and Firefox sends that write before the close.
 function saveAndClose(text) {
   const { review } = state;
-  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
-  browser.downloads
-    .download({ url, filename: fileNameForReview(review.model, review.edits), conflictAction: "uniquify", saveAs: false })
-    .catch((error) => {
-      console.error("[BrandChameleon]", error);
-      announce("Download failed. Click Download to try again.");
-    });
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
   review.dirty = false;
-  saveReview().catch((error) => console.error("[BrandChameleon]", error));
+  clearTimeout(state.saveTimer);
+  state.saveTimer = null;
+  const request = { requestId: crypto.randomUUID(), filename: fileNameForReview(review.model, review.edits), text };
+  browser.storage.session
+    .set({ [reviewKey()]: review, [downloadKey()]: request })
+    .catch((error) => console.error("[BrandChameleon]", error));
   announce("Download started");
   browser.sidebarAction.close().catch((error) => console.error("[BrandChameleon]", error));
 }

@@ -34,7 +34,7 @@ The extension itself makes no network requests. The review sidebar shows small t
 | `activeTab` | Read the current tab after you click the toolbar button. |
 | `downloads` | Save the DESIGN.md file to your download folder when you click Download. The extension does not read, change or delete your other downloads. |
 | `scripting` | Run the read-only scan in that tab. |
-| `storage` | Keep your review while the sidebar is closed and reopened. |
+| `storage` | Keep your review while the sidebar is closed and reopened. Pass the file text to the extension's background script when you click Download. The data stays in memory and is deleted when Firefox closes. |
 
 The manifest declares `data_collection_permissions: { "required": ["none"] }`.
 

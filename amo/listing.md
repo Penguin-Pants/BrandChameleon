@@ -77,7 +77,7 @@ Upload in this order (1280 x 800):
 - Compatibility: select **Firefox** (desktop) only. Do not select Firefox for Android: the extension uses the sidebar, which Android does not have.
 - Source code: not required. The package contains plain, unminified JavaScript. No build step changes the files.
 - Expected lint warning: `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION`. The extension is desktop only and keeps Firefox ESR 140 support.
-- Notes to reviewer: "Click the toolbar button on any website. The sidebar opens and shows the scan. The Download button saves a Markdown file with downloads.download() and closes the sidebar. The downloads permission is used only for this file; the extension does not read or change other downloads. The extension has no network code; logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page."
+- Notes to reviewer: "Click the toolbar button on any website. The sidebar opens and shows the scan. The Download button hands the Markdown text to the background script through storage.session and closes the sidebar; the background script saves it with downloads.download(). The downloads permission is used only for this file; the extension does not read or change other downloads. The extension has no network code; logo thumbnails in the sidebar are plain img elements that load URLs found on the scanned page."
 
 ## Upload
 
