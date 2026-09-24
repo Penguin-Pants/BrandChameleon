@@ -38,16 +38,7 @@ export function installMockBrowser({
     );
   }
   const calls = [];
-  const downloads = [];
   window.browser = {
-    downloads: {
-      download: async (options) => {
-        calls.push("downloads.download");
-        const text = await (await fetch(options.url)).text();
-        downloads.push({ ...options, text });
-        return downloads.length;
-      },
-    },
     sidebarAction: {
       close: async () => {
         calls.push(userInput ? "sidebarAction.close" : "sidebarAction.close (no user input)");
@@ -69,12 +60,12 @@ export function installMockBrowser({
           return Object.fromEntries(list.filter((k) => k in data).map((k) => [k, data[k]]));
         },
         set: async (items) => {
-          calls.push("storage.session.set");
+          calls.push(`storage.session.set ${Object.keys(items).sort().join(" ")}`);
           write(JSON.parse(JSON.stringify(items)));
         },
       },
       onChanged: { addListener: (listener) => listeners.push(listener) },
     },
   };
-  window.__mock = { set: write, get: read, calls, downloads };
+  window.__mock = { set: write, get: read, calls };
 }

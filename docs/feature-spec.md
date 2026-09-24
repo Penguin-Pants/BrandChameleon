@@ -145,7 +145,7 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 ### 7.5 Feedback
 
 - A status line (`role="status"`) announces "Scan complete", "Download started" and validation messages.
-- After Download, the sidebar closes and Firefox opens its Downloads panel. The Downloads panel is the feedback for the saved file.
+- After Download, the sidebar closes. The Firefox Downloads toolbar button shows the saved file.
 - Invalid hex input shows "Use #RGB, #RRGGBB or #RRGGBBAA." below the field and sets `aria-invalid="true"`.
 
 ### 7.6 Accessibility
@@ -304,12 +304,12 @@ All dialogs are modal `<dialog>` elements. Focus moves to the safe button (Keep 
 - **FR-45** Unchecking a typography level removes it. Editing a font family changes only that level. Unchecking a group removes its tokens and section, adds it to `omitted` with "Excluded during review" and changes affected component references to literal values. A typography reference with no literal form is removed.
 - **FR-46** Changing any field regenerates the markdown. If the markdown has text edits, the Regenerate dialog shows first. Cancel keeps the text and restores the field's previous value.
 - **FR-47** Download runs basic checks on the markdown text: the first line is `---`, a closing `---` line exists and a `name:` line with a non-empty value exists in the front matter. On failure, the Raw check dialog lists the failures. "Download anyway" continues.
-- **FR-48** Download (or "Download anyway" in the Raw check dialog) does these steps in this order, synchronously inside the click handler, with no `await` before the last step:
-  1. Create a `Blob` of the markdown text with type `text/markdown;charset=utf-8` and a `blob:` URL for it.
-  2. Call `browser.downloads.download()` with that URL, the FR-31 file name, `conflictAction: "uniquify"` and `saveAs: false`.
-  3. Mark the review clean, save it to `storage.session` and set the status to "Download started".
-  4. Call `browser.sidebarAction.close()`.
-  Cancel in the Raw check dialog keeps the sidebar open and saves nothing. Name conflicts get Firefox's unique name, for example `acme_design(1).md`. The file always goes to the default download folder with no Save dialog. If `downloads.download()` rejects while the sidebar is still open, the status says "Download failed. Click Download to try again." (change request CR-1).
+- **FR-48** Download (or "Download anyway" in the Raw check dialog) does these steps in the sidebar, in this order, synchronously inside the click handler:
+  1. Mark the review clean and set the status to "Download started".
+  2. Make one `storage.session.set()` call with the clean review and a download request at `download:<windowId>`: `{ requestId, filename, text }`. `requestId` is a new random UUID, `filename` is the FR-31 name and `text` is the markdown text.
+  3. Call `browser.sidebarAction.close()`.
+  The background script listens to `storage.onChanged`. For each new `download:*` value in the session area, it creates a `Blob` of the text (type `text/markdown;charset=utf-8`) and a `blob:` URL in its own page. It calls `browser.downloads.download()` with that URL, the file name, `conflictAction: "uniquify"` and `saveAs: false`. Then it removes the request key. It revokes the URL after 60 s.
+  Cancel in the Raw check dialog keeps the sidebar open and saves nothing. Name conflicts get Firefox's unique name, for example `acme_design(1).md`. The file always goes to the default download folder with no Save dialog (change request CR-1).
 - **FR-49** A new scan result for a window with a dirty review shows the Replace dialog. Keep discards the new result. Replace loads it. A clean review is replaced without a dialog.
 - **FR-50** Reopening the sidebar restores the review, including text edits and the dirty flag. If the stored scan status stays "scanning" for more than 20 s, the sidebar shows the Timeout error.
 - **FR-51** The UI inserts page-derived text only with `textContent` or attribute setters. It never uses `innerHTML` or `insertAdjacentHTML` with page data. Logo thumbnails use only `http:` or `https:` URLs and set `referrerpolicy="no-referrer"`.
@@ -370,8 +370,11 @@ Confirmed from sources:
 - MV3 extension pages have a default CSP that blocks inline scripts.
 - Firefox accepts `sidebarAction.close()` only while the page handles a user input event (`requireUserInput` in `sidebar_action.json`; `UserActivation::IsHandlingUserInput()` is `sUserInputEventDepth > 0`). After a real `await`, the call is rejected.
 - Closing the sidebar replaces its page with `about:blank` (`SidebarController.hide()` in `browser-sidebar.js`). An `<a download>` click starts its load in a later task (`OnLinkClickEvent` in `nsDocShell.cpp`), so a close in the same click would very likely cancel that download.
-- `downloads.download()` runs in the parent process and does not stop when the calling page unloads (`ext-downloads.js`, `ExtensionParent.sys.mjs`). A revoked or unloaded `blob:` URL stays readable for 5 s (`RELEASING_TIMER` in `BlobURLProtocolHandler.cpp`). With `saveAs: true`, the file picker needs the calling page's browsing context, which a closed sidebar no longer has.
-- Sources for the four items above: Firefox `main` branch on GitHub (`mozilla-firefox/firefox`), read on 2026-09-24.
+- `downloads.download()` runs in the parent process and does not stop when the calling page unloads (`ext-downloads.js`, `ExtensionParent.sys.mjs`). With `saveAs: true`, the file picker needs the calling page's browsing context, which a closed sidebar no longer has.
+- A page's `blob:` URLs are revoked when the page unloads. The 5 s keep-alive (`RELEASING_TIMER`) does not help new loads: `GetDataInfo()` returns nothing for a revoked URL unless the caller passes `aAlsoIfRevoked` (`BlobURLProtocolHandler.cpp`). So a download of a `blob:` URL from the closing sidebar fails. The owner's Firefox test confirmed this (CR-1, fix 1).
+- `downloads.download()` rejects `data:` URLs: its `url` format check uses `DISALLOW_INHERIT_PRINCIPAL`, and `data:` has `URI_INHERITS_SECURITY_CONTEXT` (`Schemas.sys.mjs`, `ExtensionCommon.sys.mjs`, `netwerk/build/components.conf`).
+- `storage.onChanged` is a persistent event, so it wakes a suspended event page (`PERSISTENT_EVENTS` in `ext-storage.js`). A `runtime.sendMessage()` from a closing page is not safe: the parent reads the sender's browsing context after it wakes the background (`ProxyMessenger.getSender()`).
+- Sources for the items above: Firefox `main` branch on GitHub (`mozilla-firefox/firefox`), read on 2026-09-24.
 - Firefox MV3 background uses `background.scripts` (event page).
 - This build environment has no Firefox. Mozilla download hosts are blocked by network policy. Chromium is available through Playwright.
 - The repository has no existing code or conventions.
@@ -404,7 +407,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-22** UI: choosing a candidate or a valid hex updates the markdown. Invalid hex shows the error and does not change the markdown.
 - **AC-23** UI: unchecking a group removes its section, adds the `omitted` reason "Excluded during review" and leaves no broken reference (linter 0 errors).
 - **AC-24** UI: after a text edit, a field change opens the Regenerate dialog. Cancel keeps the text and restores the field. Continue regenerates.
-- **AC-25** UI: Download calls `downloads.download()` with a `blob:` URL whose content equals the textarea, the FR-31 name, `conflictAction: "uniquify"` and `saveAs: false`. The review is then clean.
+- **AC-25** UI: Download writes a request at `download:<windowId>` with the FR-31 name, the textarea text and a new `requestId`, in the same storage call as the clean review. Background (unit test): a new request calls `downloads.download()` with a `blob:` URL made in the background whose content equals the text, the file name, `conflictAction: "uniquify"` and `saveAs: false`, then removes the request and revokes the URL after 60 s.
 - **AC-26** UI: text without front matter opens the Raw check dialog. "Download anyway" downloads.
 - **AC-27** UI: a new scan with a dirty review opens the Replace dialog. Keep retains the old review. Replace loads the new one. A clean review is replaced with no dialog.
 - **AC-28** UI: reloading the sidebar page restores the review, text edits and dirty flag.
@@ -420,7 +423,7 @@ Fixture pages live in `tests/fixtures/pages/`.
 - **AC-38** `README.md` covers install, use, development, tests, build and AMO submission. The manual checklist exists.
 - **AC-39** The CI workflow runs lint and tests on pull requests.
 - **AC-40** The owner runs the manual Firefox checklist and all items pass. This cannot run in the build environment.
-- **AC-41** UI: Download (mouse or keyboard) and "Download anyway" call `downloads.download()`, then save the clean review, then call `sidebarAction.close()` while the click is still handled. The test mock rejects `close()` outside user input, like Firefox. Cancel in the Raw check dialog calls none of them.
+- **AC-41** UI: Download (mouse or keyboard) and "Download anyway" make the storage call of FR-48, then call `sidebarAction.close()` while the click is still handled. The test mock rejects `close()` outside user input, like Firefox. Cancel in the Raw check dialog makes neither call.
 
 ## 12. Testing Requirements
 
@@ -497,7 +500,7 @@ None.
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | Download plus close in one click (CR-1) is verified by Firefox source reading and Chromium mocks only, not in real Firefox. | Manual checklist section "Download and close". |
+| R1 | The CR-1 handoff (sidebar to background through `storage.session`) is verified by Firefox source reading, Chromium mocks and Node tests, not in real Firefox. | Manual checklist section "Download and close", including a download after the background has slept. |
 | R2 | Firefox and Chromium serialize some computed values differently (modern colors, font-family quotes). | Parser accepts both forms. Manual checklist covers a real site. |
 | R3 | Role heuristics are tuned on fixtures, not real sites. | The review step lets you correct roles. Weights live in one file. |
 | R4 | The DESIGN.md spec is `alpha`. New linter versions may add rules. | Linter pinned to 0.4.0 in tests. |
@@ -522,3 +525,4 @@ None.
   - Keep auto-rename on name conflicts (`conflictAction: "uniquify"`).
 - **Changed:** FR-02, FR-48, section 7.5, section 9, section 10, AC-25, new AC-41, deferred item "Silent overwrite", risks R1 and R5, `PRIVACY.md`, `amo/listing.md`, `README.md` and the manual checklist.
 - **Side effect:** Firefox's "ask where to save files" setting no longer shows a Save dialog for this file (FR-48).
+- **Fix 1 (owner test, 2026-09-24):** the sidebar closed, but every download failed. Cause: the sidebar made the `blob:` URL, and closing the sidebar revoked it before Firefox read it (section 10). My earlier reading of the 5 s keep-alive was wrong. Now the sidebar hands the text to the background script through `storage.session`, and the background makes the URL and calls `downloads.download()` (FR-48).

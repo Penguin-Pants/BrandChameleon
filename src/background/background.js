@@ -1,4 +1,5 @@
 // Toolbar click: open the sidebar, scan the active tab, store the result (FR-04 to FR-07).
+// Save the file that the sidebar hands over at Download (FR-48).
 import { collectPage } from "../collector/collect-page.js";
 import { analyze, ScanError } from "../shared/analyze.js";
 import { SCAN_LIMITS, SCAN_TIMEOUT_MS } from "../shared/constants.js";
@@ -99,4 +100,28 @@ export function handleClick(tab) {
   return startScan(tab);
 }
 
+// FR-48: the sidebar writes the file to `download:<windowId>` and closes at
+// once. A blob: URL made in the sidebar is revoked when it closes, and Firefox
+// rejects data: URLs for downloads, so the URL is made here instead.
+export async function saveFile(key, { filename, text }) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  // download() can resolve before Firefox reads the URL, so revoke it later.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  try {
+    await browser.downloads.download({ url, filename, conflictAction: "uniquify", saveAs: false });
+  } finally {
+    await browser.storage.session.remove(key);
+  }
+}
+
+export function handleStorageChange(changes, area) {
+  if (area !== "session") return;
+  for (const [key, change] of Object.entries(changes)) {
+    if (!key.startsWith("download:") || !change.newValue) continue;
+    saveFile(key, change.newValue).catch((error) => console.error("[BrandChameleon]", error));
+  }
+}
+
 browser.action.onClicked.addListener(handleClick);
+// A persistent event: it wakes the background when it is suspended.
+browser.storage.onChanged.addListener(handleStorageChange);

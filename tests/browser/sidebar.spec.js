@@ -138,27 +138,25 @@ test("AC-24 text edits then a field change ask before regenerating", async ({ pa
   await expect(page.locator("#edited-badge")).toBeHidden();
 });
 
-const downloads = (page) => page.evaluate(() => window.__mock.downloads);
 const calls = (page) => page.evaluate(() => window.__mock.calls);
 const clearCalls = (page) => page.evaluate(() => window.__mock.calls.splice(0));
-// FR-48 order: the download and the clean review are sent before the close,
-// and the close runs while Firefox still handles the click.
-const SAVE_AND_CLOSE = ["downloads.download", "storage.session.set", "sidebarAction.close"];
+// FR-48 order: one storage write hands the file to the background script and
+// saves the clean review, then the close runs while Firefox handles the click.
+const SAVE_AND_CLOSE = ["storage.session.set download:1 review:1", "sidebarAction.close"];
 
-test("AC-25 download saves the textarea content with the FR-31 name", async ({ page }) => {
+test("AC-25 Download hands the textarea content and the FR-31 name to the background", async ({ page }) => {
   await openSidebar(page, { "scan:1": done() });
   await page.fill("#name-input", "Acme Corp");
   await expect.poll(async () => (await stored(page, "review:1"))?.dirty).toBe(true);
   await clearCalls(page);
   await page.click("#download");
-  await expect.poll(() => downloads(page)).toHaveLength(1);
-  const [saved] = await downloads(page);
-  expect(saved).toMatchObject({ filename: "acme-corp_design.md", conflictAction: "uniquify", saveAs: false });
-  expect(saved.url).toMatch(/^blob:/);
-  expect(saved.text).toBe(await markdown(page));
+  expect(await calls(page)).toEqual(SAVE_AND_CLOSE);
+  const request = await stored(page, "download:1");
+  expect(request.filename).toBe("acme-corp_design.md");
+  expect(request.text).toBe(await markdown(page));
+  expect(request.requestId).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page.locator("#status")).toHaveText("Download started");
   expect((await stored(page, "review:1")).dirty).toBe(false);
-  expect(await calls(page)).toEqual(SAVE_AND_CLOSE);
 });
 
 test("AC-41 Download closes the sidebar, also from the keyboard", async ({ page }) => {
@@ -168,7 +166,14 @@ test("AC-41 Download closes the sidebar, also from the keyboard", async ({ page 
   await page.focus("#download");
   await page.keyboard.press("Enter");
   await expect.poll(() => calls(page)).toEqual(SAVE_AND_CLOSE);
-  await expect.poll(() => downloads(page)).toHaveLength(1);
+});
+
+test("AC-41 each Download is a new request", async ({ page }) => {
+  await openSidebar(page, { "scan:1": done() });
+  await page.click("#download");
+  const first = (await stored(page, "download:1")).requestId;
+  await page.click("#download");
+  expect((await stored(page, "download:1")).requestId).not.toBe(first);
 });
 
 test("AC-26 raw check warns and allows download anyway", async ({ page }) => {
@@ -180,8 +185,8 @@ test("AC-26 raw check warns and allows download anyway", async ({ page }) => {
   await expect(page.locator("#dialog-body")).toContainText("The file must start with a --- line.");
   await clearCalls(page);
   await page.click("#dialog-confirm");
-  await expect.poll(() => calls(page)).toEqual(SAVE_AND_CLOSE);
-  await expect.poll(async () => (await downloads(page)).map((d) => d.text)).toEqual(["# No front matter\n"]);
+  expect(await calls(page)).toEqual(SAVE_AND_CLOSE);
+  expect((await stored(page, "download:1")).text).toBe("# No front matter\n");
 });
 
 test("AC-41 Cancel in the raw check keeps the sidebar open", async ({ page }) => {
@@ -193,7 +198,7 @@ test("AC-41 Cancel in the raw check keeps the sidebar open", async ({ page }) =>
   await page.click("#dialog-cancel");
   await expect(page.locator("#dialog")).toBeHidden();
   expect(await calls(page)).toEqual([]);
-  expect(await downloads(page)).toEqual([]);
+  expect(await stored(page, "download:1")).toBeUndefined();
   expect((await stored(page, "review:1")).dirty).toBe(true);
 });
 

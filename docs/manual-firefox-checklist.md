@@ -30,10 +30,11 @@ Run this checklist in real Firefox before each AMO submission. Automated tests r
 ## Download and close (risk R1)
 
 - [ ] Before you click, copy the text from the **Markdown** box.
-- [ ] Click **Download**. The sidebar closes. Firefox opens its Downloads panel and saves `<slug>_design.md` to the default download folder.
+- [ ] Click **Download**. The sidebar closes. Firefox saves `<slug>_design.md` to the default download folder, and the Downloads toolbar button shows it.
 - [ ] Open the file. It is complete and matches the text you copied.
 - [ ] Scan the same site again and click **Download**. Firefox saves `<slug>_design(1).md` (auto-rename) and keeps the first file.
 - [ ] Scan again, focus **Download** with the Tab key and press Enter. The file saves and the sidebar closes.
+- [ ] Scan again and wait 2 minutes before you click **Download** (the background script sleeps after about 30 s). The file still saves and the sidebar closes.
 - [ ] Scan again and delete the first `---` line in the Markdown box. Click **Download**. The "Check the markdown" dialog opens. Click **Cancel**: the sidebar stays open and no file saves.
 - [ ] Click **Download** again, then **Download anyway**. The file saves and the sidebar closes.
 - [ ] In Firefox Settings, turn on "Ask where to save files before downloading" (older versions: "Always ask you where to save files"). Scan and click **Download**. The file saves to the default download folder with no Save dialog, and the sidebar closes. Turn the setting off again.
