@@ -90,20 +90,21 @@ function collectColorUses(records) {
 
   const parsed = records.map((record) => {
     const info = { record, bg: null, text: null, border: null };
+    // FR-21: a link, or content inside one, that keeps the browser's default blue
+    // (as text, a currentColor border or an icon fill) shows no brand choice. The
+    // value stays unset, so the fuzzy cluster lookup cannot map it onto a nearby
+    // real color.
+    const isLink = record.tag === "a" || record.kind === "link" || record.inLink === true;
+    const defaultLinkColor = (raw) => isLink && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(raw));
     if (record.kind === "svg") {
-      addUse(record.fill, "navSvg", record);
-      addUse(record.stroke, "navSvg", record);
+      if (!defaultLinkColor(record.fill)) addUse(record.fill, "navSvg", record);
+      if (!defaultLinkColor(record.stroke)) addUse(record.stroke, "navSvg", record);
       return info;
     }
     if (record.bg) {
       const use = record.kind === "button" ? "buttonBg" : record.kind === "nav" ? "navBg" : record.largeBg ? "largeBg" : "other";
       info.bg = addUse(record.bg, use, record);
     }
-    // FR-21: a link that keeps the browser's default blue (also as a button or
-    // tile, and in a currentColor border) shows no brand choice. The value stays
-    // unset, so the fuzzy cluster lookup cannot map it onto a nearby real color.
-    const isLink = record.tag === "a" || record.kind === "link";
-    const defaultLinkColor = (raw) => isLink && BROWSER_DEFAULT_LINK_COLORS.has(normalizeColor(raw));
     if (record.border && !defaultLinkColor(record.border[2])) {
       info.border = addUse(record.border[2], record.kind === "button" ? "buttonBorder" : "other", record);
     }

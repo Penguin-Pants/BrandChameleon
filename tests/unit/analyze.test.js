@@ -381,3 +381,23 @@ test("FR-26 a system font stack is written as system-ui", () => {
   assert.equal(level("system-ui, sans-serif").family, "system-ui");
   assert.equal(level('"Avenir Next", BlinkMacSystemFont, sans-serif').family, "Avenir Next");
 });
+
+test("FR-21 content inside a link does not bring the default blue back", () => {
+  const model = analyze(
+    scan({
+      backgrounds: { body: "rgb(255, 255, 255)" },
+      records: [
+        text("rgb(26, 26, 26)", { textLen: 200 }),
+        record({ kind: "nav", tag: "header", bg: "rgb(0, 59, 149)" }),
+        text("rgb(0, 0, 238)", { tag: "span", inLink: true, textLen: 500, count: 30 }),
+        record({ kind: "svg", tag: "path", inNav: true, inLink: true, fill: "rgb(0, 0, 238)", stroke: null }),
+        text("rgb(0, 108, 228)", { tag: "span", inLink: true, textLen: 40 }),
+      ],
+    }),
+    CONTEXT,
+  );
+  const hexes = model.candidates.map((c) => c.hex);
+  assert.ok(!hexes.includes("#0000EE"), "inherited text and icon fills are skipped");
+  assert.ok(hexes.includes("#006CE4"), "a styled color inside a link still counts");
+  assert.equal(model.candidates.find((c) => c.id === model.roles["on-surface"])?.hex, "#1A1A1A");
+});
